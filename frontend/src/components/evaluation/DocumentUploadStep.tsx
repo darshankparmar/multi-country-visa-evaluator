@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect } from 'react'
+import React, { useCallback, useEffect, useRef } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { useEvaluationContext } from '../../context/EvaluationContext'
 import { useFileUpload } from '../../hooks/useFileUpload'
@@ -13,21 +13,21 @@ interface DocumentUploadStepProps {
 export const DocumentUploadStep: React.FC<DocumentUploadStepProps> = ({ onNext, onBack }) => {
   const { formData, updateFormData } = useEvaluationContext()
   const { files, errors, addFiles, removeFile } = useFileUpload()
+  const initializedRef = useRef(false)
 
-  // Initialize files from context on mount
+  // Initialize files from context on mount (only once)
   useEffect(() => {
-    if (formData.documents.length > 0 && files.length === 0) {
+    if (!initializedRef.current && formData.documents.length > 0) {
       addFiles(formData.documents)
+      initializedRef.current = true
     }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [formData.documents, addFiles])
 
   const onDrop = useCallback(
     (acceptedFiles: File[]) => {
       addFiles(acceptedFiles)
-      const updatedDocuments = [...files, ...acceptedFiles]
-      updateFormData({ documents: updatedDocuments })
     },
-    [addFiles, files, updateFormData]
+    [addFiles]
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -45,8 +45,6 @@ export const DocumentUploadStep: React.FC<DocumentUploadStepProps> = ({ onNext, 
 
   const handleRemove = (index: number) => {
     removeFile(index)
-    const newDocs = files.filter((_, i) => i !== index)
-    updateFormData({ documents: newDocs })
   }
 
   const handleNext = () => {
