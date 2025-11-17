@@ -55,5 +55,3 @@ export function createApp(): Application {
 
   return app;
 }
-
-export default createApp();

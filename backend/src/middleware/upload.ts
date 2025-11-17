@@ -38,15 +38,18 @@ const fileFilter = (
 /**
  * Multer configuration with memory storage
  * Files are stored in memory as Buffer objects for processing before saving to disk
+ * 
+ * Note: Using getter for fileSize to support hot-reload in development
+ * where modules may be reloaded without restarting the process
  */
-const config = getConfig();
-
 const storage = multer.memoryStorage();
 
 const upload = multer({
   storage,
   limits: {
-    fileSize: config.MAX_FILE_SIZE, // 5MB default
+    get fileSize() {
+      return getConfig().MAX_FILE_SIZE;
+    },
     files: 10 // Maximum 10 files per request
   },
   fileFilter

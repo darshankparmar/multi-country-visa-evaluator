@@ -1,4 +1,16 @@
+/**
+ * Server entry point
+ * Initializes environment, database, and starts Express server
+ * 
+ * IMPORTANT: dotenv.config() must be called before any imports
+ * to ensure environment variables are available during module initialization
+ */
+
+// Load environment variables FIRST, before any imports
 import dotenv from 'dotenv';
+dotenv.config();
+
+// Now import application modules
 import { createApp } from './src/app';
 import { getConfig, validateEnv } from './src/config/environment';
 import { connectDatabase, disconnectDatabase } from './src/config/database';
@@ -6,14 +18,6 @@ import { seedDatabase } from './src/seeders/visaTypeSeeder';
 import { logger } from './src/config/logger';
 import { promises as fs } from 'fs';
 import path from 'path';
-
-/**
- * Server entry point
- * Initializes environment, database, and starts Express server
- */
-
-// Load environment variables from .env file
-dotenv.config();
 
 /**
  * Ensure upload directory exists

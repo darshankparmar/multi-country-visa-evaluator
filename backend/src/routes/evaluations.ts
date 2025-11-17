@@ -17,7 +17,6 @@ import { requestTimeout } from '../middleware/timeout';
 import { getConfig } from '../config/environment';
 
 const router = Router();
-const config = getConfig();
 
 /**
  * POST /api/evaluations
@@ -27,10 +26,12 @@ const config = getConfig();
  * - Validates request body and file uploads
  * - 30-second timeout for processing
  * - Optional partner authentication (if x-api-key provided)
+ * 
+ * Note: Using middleware wrapper to support hot-reload in development
  */
 router.post(
   '/',
-  requestTimeout(config.REQUEST_TIMEOUT_MS), // Configurable timeout from environment
+  (req, res, next) => requestTimeout(getConfig().REQUEST_TIMEOUT_MS)(req, res, next),
   uploadDocuments, // Handle file uploads
   validateRequest(createEvaluationSchema, 'body'), // Validate body
   validateFileUpload(true, 1, 10), // Validate at least 1 file, max 10
