@@ -10,6 +10,8 @@ export interface EvaluationResponse {
   evaluationId: string
   score: number
   summary: string
+  recommendations?: string[]
+  conclusion?: string
   userInfo: {
     name: string
     email: string
@@ -39,6 +41,8 @@ export interface EvaluationDetail {
   results: {
     score: number
     summary: string
+    recommendations?: string[]
+    conclusion?: string
     evaluatedAt: string
   }
   createdAt: string
