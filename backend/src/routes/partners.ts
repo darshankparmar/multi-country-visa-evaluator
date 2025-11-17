@@ -21,8 +21,6 @@ const router = Router();
  * - Validates partner data
  * - Generates cryptographically secure API key
  * - Returns partner details including API key
- * 
- * Requirements: 10.1, 10.2
  */
 router.post(
   '/',
@@ -37,8 +35,6 @@ router.post(
  * - Admin only endpoint (future: add admin authentication)
  * - Returns all partners with their details
  * - No pagination (admin view)
- * 
- * Requirements: 10.3, 10.4
  */
 router.get(
   '/',
@@ -52,8 +48,6 @@ router.get(
  * - Admin only endpoint (future: add admin authentication)
  * - Activates or deactivates a partner
  * - Deactivated partners cannot authenticate
- * 
- * Requirements: 10.4, 10.5
  */
 router.patch(
   '/:id/status',

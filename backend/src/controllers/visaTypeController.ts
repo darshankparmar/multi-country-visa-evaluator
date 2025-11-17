@@ -18,8 +18,6 @@ function getVisaTypeRepository(): VisaTypeRepository {
  * Returns all available visa types grouped by country
  * Uses cached results when available for performance
  * No authentication required - public endpoint
- * 
- * Requirements: 3.1, 3.2, 3.3
  */
 export async function listVisaTypes(
   req: Request,
@@ -73,8 +71,6 @@ export async function listVisaTypes(
  * Returns all visa types available for a specific country
  * Uses cached results when available for performance
  * No authentication required - public endpoint
- * 
- * Requirements: 3.1, 3.2, 3.3
  */
 export async function getVisaTypesByCountry(
   req: Request<{ country: string }>,

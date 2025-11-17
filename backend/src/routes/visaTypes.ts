@@ -13,8 +13,6 @@ const router = Router();
  * - Returns all visa types grouped by country
  * - No authentication required (public endpoint)
  * - Uses caching for performance
- * 
- * Requirements: 3.1, 3.2
  */
 router.get('/', listVisaTypes);
 
@@ -25,8 +23,6 @@ router.get('/', listVisaTypes);
  * - Returns visa types available for the specified country
  * - No authentication required (public endpoint)
  * - Uses caching for performance
- * 
- * Requirements: 3.1, 3.2
  */
 router.get('/:country', getVisaTypesByCountry);
 

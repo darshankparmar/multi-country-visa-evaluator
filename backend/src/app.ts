@@ -8,7 +8,6 @@ import routes from './routes/index';
 /**
  * Create and configure Express application
  * Sets up middleware, routes, and error handling
- * Requirements: 9.1, 9.2, 9.3, 9.4
  */
 export function createApp(): Application {
   const app = express();

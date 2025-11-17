@@ -426,8 +426,6 @@ feat: implement email notification service
 
 Add Nodemailer integration for sending evaluation results to users.
 Includes HTML email template and error handling.
-
-Requirements: 5.1, 5.2, 5.3
 ```
 
 ## Troubleshooting

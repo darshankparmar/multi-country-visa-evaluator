@@ -11,7 +11,6 @@ const partnerRepository = new PartnerRepository();
 
 /**
  * Generate a cryptographically secure API key
- * Requirements: 10.2
  * 
  * @returns Secure random API key string
  */
@@ -41,8 +40,6 @@ function toPartnerResponse(partner: any): PartnerResponse {
 /**
  * POST /api/partners
  * Create a new partner with generated API key
- * 
- * Requirements: 10.1, 10.2, 10.3
  * 
  * @param req - Express request with CreatePartnerRequest body
  * @param res - Express response
@@ -95,8 +92,6 @@ export async function createPartner(
  * GET /api/partners
  * List all partners
  * 
- * Requirements: 10.3, 10.4
- * 
  * @param req - Express request
  * @param res - Express response
  * @param next - Express next function
@@ -126,8 +121,6 @@ export async function listPartners(
 /**
  * PATCH /api/partners/:id/status
  * Update partner active status
- * 
- * Requirements: 10.4, 10.5
  * 
  * @param req - Express request with partner ID param and UpdatePartnerStatusRequest body
  * @param res - Express response

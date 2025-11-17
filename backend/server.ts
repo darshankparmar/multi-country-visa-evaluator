@@ -10,7 +10,6 @@ import path from 'path';
 /**
  * Server entry point
  * Initializes environment, database, and starts Express server
- * Requirements: 6.1, 3.4
  */
 
 // Load environment variables from .env file

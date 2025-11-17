@@ -35,8 +35,6 @@ function getEvaluationService(): EvaluationService {
  * 
  * Handles file uploads, validates input, processes evaluation through service layer
  * Returns evaluation ID, score, and summary
- * 
- * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.4
  */
 export async function createEvaluation(
   req: Request<{}, {}, CreateEvaluationRequest>,
@@ -110,8 +108,6 @@ export async function createEvaluation(
  * GET /api/evaluations/:id
  * 
  * Retrieves complete evaluation details including documents and results
- * 
- * Requirements: 4.3
  */
 export async function getEvaluation(
   req: Request<{ id: string }>,
@@ -179,8 +175,6 @@ export async function getEvaluation(
  * Requires partner authentication
  * Returns only evaluations associated with the authenticated partner
  * Supports pagination and date range filtering
- * 
- * Requirements: 4.3, 4.4, 4.5
  */
 export async function listEvaluations(
   req: Request<{}, {}, {}, ListEvaluationsQuery>,

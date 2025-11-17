@@ -10,8 +10,6 @@ import mongoose from 'mongoose';
  * Handles all errors thrown in the application
  * Logs errors with context and returns standardized error responses
  * 
- * Requirements: 8.1, 8.2, 9.4
- * 
  * @param err - Error object
  * @param req - Express request object
  * @param res - Express response object

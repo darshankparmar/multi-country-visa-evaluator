@@ -7,8 +7,6 @@ import { logger } from '../config/logger';
  * Validation middleware factory
  * Creates middleware that validates request data against a Zod schema
  * 
- * Requirements: 1.1, 9.1
- * 
  * @param schema - Zod schema to validate against
  * @param source - Which part of the request to validate ('body', 'query', 'params')
  * @returns Express middleware function

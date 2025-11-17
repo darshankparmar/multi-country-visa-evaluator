@@ -7,8 +7,6 @@ import { logger } from '../config/logger';
  * Authentication middleware for partner API key validation
  * Extracts x-api-key from request headers and validates against active partners
  * Attaches partner object to req.partner if valid
- * 
- * Requirements: 4.1, 4.2, 10.5
  */
 export async function authenticatePartner(
   req: Request,

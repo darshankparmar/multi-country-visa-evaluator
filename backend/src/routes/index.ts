@@ -9,7 +9,6 @@ import { getConfig } from '../config/environment';
 /**
  * Main router that aggregates all API routes
  * Registers all route modules and provides health check endpoint
- * Requirements: 9.1
  */
 const router = Router();
 
@@ -61,7 +60,6 @@ const formatUptime = (seconds: number): string => {
  * Returns service status, version, uptime, environment, and MongoDB connection state
  * 
  * GET /api/health
- * Requirements: 9.1
  */
 router.get('/health', (req: Request, res: Response) => {
   const config = getConfig();

@@ -27,8 +27,6 @@ const config = getConfig();
  * - Validates request body and file uploads
  * - 30-second timeout for processing
  * - Optional partner authentication (if x-api-key provided)
- * 
- * Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 8.4, 8.5, 9.1
  */
 router.post(
   '/',
@@ -45,8 +43,6 @@ router.post(
  * 
  * - Returns complete evaluation details
  * - No authentication required (public access by ID)
- * 
- * Requirements: 4.3
  */
 router.get(
   '/:id',
@@ -61,8 +57,6 @@ router.get(
  * - Requires partner authentication via x-api-key header
  * - Returns only evaluations associated with the partner
  * - Supports pagination and filtering
- * 
- * Requirements: 4.3, 4.4, 4.5, 9.1
  */
 router.get(
   '/',

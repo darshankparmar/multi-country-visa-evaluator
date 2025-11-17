@@ -6,8 +6,6 @@ import { logger } from '../config/logger';
  * Request logging middleware
  * Logs incoming requests with method, path, timestamp, and unique request ID
  * Logs response status code and duration when response completes
- * 
- * Requirements: 8.3
  */
 export function requestLogger(
   req: Request,

@@ -6,8 +6,6 @@ import { logger } from '../config/logger';
  * Sets a timeout limit for request processing
  * Returns 408 Request Timeout if the limit is exceeded
  * 
- * Requirements: 8.4, 8.5
- * 
  * @param timeoutMs - Timeout duration in milliseconds
  * @returns Express middleware function
  */
