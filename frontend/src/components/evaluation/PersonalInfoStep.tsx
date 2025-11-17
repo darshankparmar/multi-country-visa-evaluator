@@ -36,8 +36,8 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext }) =>
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Personal Information</h2>
-      <p className="text-gray-600 mb-6">Please provide your basic information to get started.</p>
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Personal Information</h2>
+      <p className="text-sm sm:text-base text-gray-600 mb-6">Please provide your basic information to get started.</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <Input
@@ -60,7 +60,7 @@ export const PersonalInfoStep: React.FC<PersonalInfoStepProps> = ({ onNext }) =>
         />
 
         <div className="flex justify-end pt-4">
-          <Button type="submit" disabled={!isValid}>
+          <Button type="submit" disabled={!isValid} className="w-full sm:w-auto">
             Next
           </Button>
         </div>

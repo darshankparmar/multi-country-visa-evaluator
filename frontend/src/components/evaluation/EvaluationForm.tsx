@@ -94,14 +94,14 @@ export const EvaluationForm: React.FC = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 sm:p-8">
+    <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
       {/* Step Indicator */}
-      <div className="mb-8">
+      <div className="mb-6 sm:mb-8">
         <StepIndicator steps={STEPS} currentStep={currentStep} />
       </div>
 
       {/* Current Step Content */}
-      <div className="mt-8">{renderCurrentStep()}</div>
+      <div className="mt-6 sm:mt-8">{renderCurrentStep()}</div>
     </div>
   )
 }

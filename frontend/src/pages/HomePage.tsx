@@ -11,9 +11,9 @@ interface FeatureCardProps {
 const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) => {
   return (
     <div className="bg-white rounded-lg shadow-md p-6 text-center hover:shadow-lg transition-shadow">
-      <div className="text-4xl mb-4">{icon}</div>
-      <h3 className="text-xl font-semibold text-gray-900 mb-2">{title}</h3>
-      <p className="text-gray-600">{description}</p>
+      <div className="text-3xl sm:text-4xl mb-3 sm:mb-4">{icon}</div>
+      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">{title}</h3>
+      <p className="text-sm sm:text-base text-gray-600">{description}</p>
     </div>
   )
 }
@@ -23,28 +23,28 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      <div className="container mx-auto px-4 py-16">
+      <div className="container mx-auto px-4 py-8 sm:py-12 lg:py-16">
         <div className="max-w-4xl mx-auto text-center">
           {/* Hero Section */}
-          <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 mb-6">
+          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-gray-900 mb-4 sm:mb-6 px-2">
             Multi-Country Visa Evaluation Tool
           </h1>
-          <p className="text-lg sm:text-xl text-gray-600 mb-8 px-4">
+          <p className="text-base sm:text-lg lg:text-xl text-gray-600 mb-6 sm:mb-8 px-4">
             Get instant evaluation of your visa application chances for multiple countries
           </p>
           
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
-            <Button onClick={() => navigate('/evaluation')} size="lg">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 px-4">
+            <Button onClick={() => navigate('/evaluation')} size="lg" className="w-full sm:w-auto">
               Start Evaluation
             </Button>
-            <Button onClick={() => navigate('/search')} variant="outline" size="lg">
+            <Button onClick={() => navigate('/search')} variant="outline" size="lg" className="w-full sm:w-auto">
               Search Results
             </Button>
           </div>
           
           {/* Feature Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 px-2">
             <FeatureCard 
               icon="🌍"
               title="Multiple Countries"

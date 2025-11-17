@@ -30,23 +30,23 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Review Your Application</h2>
-      <p className="text-gray-600 mb-6">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Review Your Application</h2>
+      <p className="text-sm sm:text-base text-gray-600 mb-6">
         Please review all the information before submitting your visa evaluation.
       </p>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {/* Personal Information Section */}
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+        <div className="bg-gray-50 rounded-lg p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Personal Information</h3>
             <button
               type="button"
               onClick={() => onEdit(0)}
-              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium min-h-[44px] px-2"
             >
               <PencilIcon className="w-4 h-4 mr-1" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
           <dl className="space-y-3">
@@ -68,16 +68,16 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
         </div>
 
         {/* Visa Selection Section */}
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+        <div className="bg-gray-50 rounded-lg p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Visa Selection</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Visa Selection</h3>
             <button
               type="button"
               onClick={() => onEdit(1)}
-              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium min-h-[44px] px-2"
             >
               <PencilIcon className="w-4 h-4 mr-1" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
           <dl className="space-y-3">
@@ -99,25 +99,25 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
         </div>
 
         {/* Documents Section */}
-        <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+        <div className="bg-gray-50 rounded-lg p-4 sm:p-6 border border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">
-              Uploaded Documents ({formData.documents.length})
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+              Documents ({formData.documents.length})
             </h3>
             <button
               type="button"
               onClick={() => onEdit(2)}
-              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium"
+              className="flex items-center text-sm text-primary-600 hover:text-primary-700 font-medium min-h-[44px] px-2"
             >
               <PencilIcon className="w-4 h-4 mr-1" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </button>
           </div>
           {formData.documents.length > 0 ? (
             <ul className="space-y-2">
               {formData.documents.map((file, index) => (
                 <li key={index} className="flex items-center bg-white rounded p-3 border border-gray-200">
-                  <DocumentIcon className="w-5 h-5 text-primary-600 mr-3 flex-shrink-0" />
+                  <DocumentIcon className="w-5 h-5 text-primary-600 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
                     <p className="text-xs text-gray-500">{formatFileSize(file.size)}</p>
@@ -126,14 +126,14 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
               ))}
             </ul>
           ) : (
-            <p className="text-gray-500">No documents uploaded</p>
+            <p className="text-sm sm:text-base text-gray-500">No documents uploaded</p>
           )}
         </div>
       </div>
 
       {/* Important Notice */}
-      <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
+      <div className="mt-4 sm:mt-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4">
+        <p className="text-xs sm:text-sm text-blue-800">
           <span className="font-semibold">Important:</span> By submitting this evaluation, you confirm
           that all information provided is accurate and complete. The evaluation results are for
           informational purposes only and do not guarantee visa approval.
@@ -141,11 +141,11 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between pt-6 mt-6 border-t">
-        <Button type="button" onClick={onBack} variant="outline" disabled={loading}>
+      <div className="flex flex-col sm:flex-row justify-between gap-3 pt-6 mt-6 border-t">
+        <Button type="button" onClick={onBack} variant="outline" disabled={loading} className="w-full sm:w-auto order-2 sm:order-1">
           Back
         </Button>
-        <Button type="button" onClick={onSubmit} disabled={loading} loading={loading}>
+        <Button type="button" onClick={onSubmit} disabled={loading} loading={loading} className="w-full sm:w-auto order-1 sm:order-2">
           {loading ? 'Submitting...' : 'Submit Evaluation'}
         </Button>
       </div>

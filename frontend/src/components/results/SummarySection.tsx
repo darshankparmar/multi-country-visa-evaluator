@@ -12,12 +12,12 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
   country 
 }) => {
   return (
-    <div className="mt-8">
-      <h2 className="text-2xl font-semibold text-gray-900 mb-4">
+    <div className="mt-6 sm:mt-8">
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
         Evaluation Summary
       </h2>
       
-      <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+      <div className="bg-blue-50 border-l-4 border-blue-500 p-3 sm:p-4 mb-4 sm:mb-6">
         <div className="flex items-start">
           <div className="flex-shrink-0">
             <svg 
@@ -33,7 +33,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
             </svg>
           </div>
           <div className="ml-3">
-            <p className="text-sm font-medium text-blue-800">
+            <p className="text-sm font-medium text-blue-800 break-words">
               {country} - {visaType}
             </p>
           </div>
@@ -41,7 +41,7 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
       </div>
 
       <div className="prose max-w-none">
-        <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+        <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
           {summary}
         </p>
       </div>

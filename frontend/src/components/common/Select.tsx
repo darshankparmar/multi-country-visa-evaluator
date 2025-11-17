@@ -39,7 +39,7 @@ export const Select: React.FC<SelectProps> = ({
         <div className="relative">
           <Listbox.Button
             className={`
-              relative w-full cursor-default rounded-md py-2 pl-3 pr-10 text-left shadow-sm sm:text-sm
+              relative w-full cursor-default rounded-md py-2 pl-3 pr-10 text-left shadow-sm text-base sm:text-sm min-h-[44px]
               ${error 
                 ? 'border border-red-300 focus:border-red-500 focus:ring-red-500' 
                 : 'border border-gray-300 focus:border-primary-500 focus:ring-primary-500'
@@ -69,7 +69,7 @@ export const Select: React.FC<SelectProps> = ({
                 <Listbox.Option
                   key={option.value}
                   className={({ active }) =>
-                    `relative cursor-default select-none py-2 pl-10 pr-4 ${
+                    `relative cursor-default select-none py-3 pl-10 pr-4 min-h-[44px] ${
                       active ? 'bg-primary-100 text-primary-900' : 'text-gray-900'
                     }`
                   }

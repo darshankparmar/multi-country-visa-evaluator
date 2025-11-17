@@ -24,16 +24,16 @@ export const ScoreCard: React.FC<ScoreCardProps> = ({ score }) => {
   }
 
   return (
-    <div className="text-center py-8 border-b">
-      <div className={`text-6xl font-bold ${getScoreColor(score)} mb-2`}>
+    <div className="text-center py-6 sm:py-8 border-b">
+      <div className={`text-5xl sm:text-6xl font-bold ${getScoreColor(score)} mb-2`}>
         {score}/100
       </div>
-      <div className="text-xl text-gray-700 font-medium">
+      <div className="text-lg sm:text-xl text-gray-700 font-medium">
         {getScoreLabel(score)}
       </div>
-      <div className="mt-4 max-w-md mx-auto bg-gray-200 rounded-full h-4">
+      <div className="mt-4 max-w-md mx-auto bg-gray-200 rounded-full h-3 sm:h-4">
         <div 
-          className={`h-4 rounded-full transition-all ${getProgressBarColor(score)}`}
+          className={`h-3 sm:h-4 rounded-full transition-all ${getProgressBarColor(score)}`}
           style={{ width: `${score}%` }}
         />
       </div>

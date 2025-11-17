@@ -31,13 +31,13 @@ export const SearchPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center py-8">
       <div className="container mx-auto px-4">
-        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-8">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2 text-center">
+        <div className="max-w-md mx-auto bg-white rounded-lg shadow-lg p-6 sm:p-8">
+          <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 text-center">
             Search Evaluation
           </h1>
-          <p className="text-gray-600 mb-6 text-center">
+          <p className="text-sm sm:text-base text-gray-600 mb-6 text-center">
             Enter your evaluation ID to view results
           </p>
 
@@ -49,7 +49,7 @@ export const SearchPage: React.FC = () => {
                 value={evaluationId}
                 onChange={(e) => setEvaluationId(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder="e.g., 123e4567-e89b-12d3-a456-426614174000"
+                placeholder="e.g., 123e4567-e89b-12d3..."
                 error={error || undefined}
               />
             </div>
@@ -62,19 +62,19 @@ export const SearchPage: React.FC = () => {
               Search
             </Button>
 
-            <div className="text-center">
+            <div className="text-center pt-2">
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="text-sm text-blue-600 hover:text-blue-700 underline"
+                className="text-sm text-blue-600 hover:text-blue-700 underline min-h-[44px] inline-flex items-center justify-center px-4"
               >
                 Back to Home
               </button>
             </div>
           </div>
 
-          <div className="mt-6 p-4 bg-blue-50 rounded-lg">
-            <p className="text-sm text-gray-700">
+          <div className="mt-6 p-3 sm:p-4 bg-blue-50 rounded-lg">
+            <p className="text-xs sm:text-sm text-gray-700">
               <strong>Tip:</strong> Your evaluation ID was provided when you submitted your evaluation. 
               Check your email or the results page.
             </p>

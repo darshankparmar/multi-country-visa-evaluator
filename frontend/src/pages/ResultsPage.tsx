@@ -34,7 +34,7 @@ export const ResultsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <LoadingSpinner />
       </div>
     )
@@ -42,7 +42,7 @@ export const ResultsPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <ErrorMessage message={error} onRetry={() => navigate('/search')} />
       </div>
     )
@@ -50,17 +50,15 @@ export const ResultsPage: React.FC = () => {
 
   if (!evaluation) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <ErrorMessage message="Evaluation not found" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <ResultsDisplay evaluation={evaluation} />
-      </div>
+    <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
+      <ResultsDisplay evaluation={evaluation} />
     </div>
   )
 }

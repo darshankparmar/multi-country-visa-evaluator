@@ -13,7 +13,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const helperId = `${inputId}-helper`
     
     const inputClassName = `
-      block w-full rounded-md shadow-sm sm:text-sm
+      block w-full rounded-md shadow-sm text-base sm:text-sm min-h-[44px] px-3 py-2
       ${error 
         ? 'border-red-300 text-red-900 placeholder-red-300 focus:border-red-500 focus:ring-red-500' 
         : 'border-gray-300 focus:border-primary-500 focus:ring-primary-500'

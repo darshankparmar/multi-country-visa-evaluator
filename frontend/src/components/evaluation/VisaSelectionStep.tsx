@@ -76,8 +76,8 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
 
   return (
     <div>
-      <h2 className="text-2xl font-semibold text-gray-900 mb-2">Visa Selection</h2>
-      <p className="text-gray-600 mb-6">Select your target country and visa type.</p>
+      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-2">Visa Selection</h2>
+      <p className="text-sm sm:text-base text-gray-600 mb-6">Select your target country and visa type.</p>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Country Selector */}
@@ -137,7 +137,7 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
         {/* Visa Type Details */}
         {selectedVisaType && (
           <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <h3 className="font-semibold text-gray-900 mb-2">{selectedVisaType.visaType}</h3>
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2">{selectedVisaType.visaType}</h3>
             {selectedVisaType.description && (
               <p className="text-sm text-gray-700 mb-3">{selectedVisaType.description}</p>
             )}
@@ -149,9 +149,9 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
             {selectedVisaType.requiredDocuments && selectedVisaType.requiredDocuments.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-900 mb-2">Required Documents:</p>
-                <ul className="list-disc list-inside space-y-1">
+                <ul className="list-disc list-inside space-y-1 pl-2">
                   {selectedVisaType.requiredDocuments.map((doc, index) => (
-                    <li key={index} className="text-sm text-gray-700">
+                    <li key={index} className="text-sm text-gray-700 break-words">
                       {doc}
                     </li>
                   ))}
@@ -161,11 +161,11 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
           </div>
         )}
 
-        <div className="flex justify-between pt-4">
-          <Button type="button" onClick={onBack} variant="outline">
+        <div className="flex flex-col sm:flex-row justify-between gap-3 pt-4">
+          <Button type="button" onClick={onBack} variant="outline" className="w-full sm:w-auto order-2 sm:order-1">
             Back
           </Button>
-          <Button type="submit" disabled={!isValid}>
+          <Button type="submit" disabled={!isValid} className="w-full sm:w-auto order-1 sm:order-2">
             Next
           </Button>
         </div>

@@ -14,7 +14,7 @@ interface StepIndicatorProps {
 export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => {
   return (
     <nav aria-label="Progress">
-      <ol className="flex items-center justify-between w-full">
+      <ol className="flex items-center justify-between w-full gap-2">
         {steps.map((step, index) => {
           const isCompleted = index < currentStep
           const isCurrent = index === currentStep
@@ -22,13 +22,13 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
           return (
             <li
               key={step.id}
-              className={"flex items-center flex-1"}
+              className="flex items-center flex-1"
             >
-              <div className="flex flex-col items-center flex-1">
+              <div className="flex flex-col items-center flex-1 w-full">
                 {/* Step Circle */}
                 <div
                   className={`
-                    flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all
+                    flex items-center justify-center w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 transition-all
                     ${
                       isCompleted
                         ? 'bg-primary-600 border-primary-600'
@@ -39,10 +39,10 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
                   `}
                 >
                   {isCompleted ? (
-                    <CheckIcon className="w-6 h-6 text-white" />
+                    <CheckIcon className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                   ) : (
                     <span
-                      className={`text-sm font-semibold ${
+                      className={`text-sm sm:text-base font-semibold ${
                         isCurrent ? 'text-primary-600' : 'text-gray-500'
                       }`}
                     >
@@ -54,7 +54,7 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
                 {/* Step Name */}
                 <span
                   className={`
-                    mt-2 text-xs sm:text-sm font-medium text-center
+                    mt-2 text-xs sm:text-sm font-medium text-center px-1 leading-tight
                     ${
                       isCurrent
                         ? 'text-primary-600'
