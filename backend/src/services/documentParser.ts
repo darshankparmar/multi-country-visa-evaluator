@@ -3,6 +3,7 @@ import path from 'path';
 import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import { logger } from '../config/logger';
+import { getConfig } from '../config/environment';
 
 /**
  * Interface representing a parsed document with extracted text
@@ -25,13 +26,15 @@ export class DocumentParser {
   private readonly parsingTimeout: number;
 
   constructor() {
-    // Load configuration from environment or use defaults
-    this.maxTextLength = parseInt(process.env.MAX_DOCUMENT_TEXT_LENGTH || '10000');
-    this.parsingTimeout = parseInt(process.env.PARSING_TIMEOUT || '30000');
+    // Load configuration from environment using validated config
+    const config = getConfig();
+    this.maxTextLength = config.MAX_DOCUMENT_TEXT_LENGTH;
+    this.parsingTimeout = config.PARSING_TIMEOUT;
     
     logger.info('DocumentParser initialized', {
       maxTextLength: this.maxTextLength,
-      parsingTimeout: this.parsingTimeout
+      parsingTimeout: this.parsingTimeout,
+      parsingEnabled: config.ENABLE_DOCUMENT_PARSING
     });
   }
 

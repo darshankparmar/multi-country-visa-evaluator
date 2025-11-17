@@ -354,13 +354,15 @@ Ensure all category names match exactly the categories listed above.`;
 
   /**
    * Call OpenAI API with retry logic and exponential backoff
-   * Retries up to 2 times on failure
+   * Retries based on AI_RETRY_ATTEMPTS configuration
    */
-  private async callOpenAIWithRetry(messages: any[], maxRetries = 2): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  private async callOpenAIWithRetry(messages: any[]): Promise<OpenAI.Chat.Completions.ChatCompletion> {
     if (!this.openai) {
       throw new Error('OpenAI client not initialized - mock mode should be handled before calling this method');
     }
     
+    const config = getConfig();
+    const maxRetries = config.AI_RETRY_ATTEMPTS;
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -368,8 +370,8 @@ Ensure all category names match exactly the categories listed above.`;
         const response = await this.openai.chat.completions.create({
           model: this.model,
           messages,
-          temperature: 0.7,
-          max_tokens: 2000
+          temperature: config.AI_TEMPERATURE,
+          max_tokens: config.AI_MAX_TOKENS
         });
         
         // Log successful call
