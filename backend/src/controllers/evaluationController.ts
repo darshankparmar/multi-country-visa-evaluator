@@ -83,6 +83,8 @@ export async function createEvaluation(
       evaluationId: result.evaluationId,
       score: result.score,
       summary: result.summary,
+      recommendations: result.evaluation.results?.recommendations,
+      conclusion: result.evaluation.results?.conclusion,
       userInfo: {
         name: result.evaluation.userInfo.name,
         email: result.evaluation.userInfo.email
@@ -152,6 +154,8 @@ export async function getEvaluation(
       results: evaluation.results ? {
         score: evaluation.results.score,
         summary: evaluation.results.summary,
+        recommendations: evaluation.results.recommendations,
+        conclusion: evaluation.results.conclusion,
         evaluatedAt: evaluation.results.evaluatedAt
       } : undefined,
       partnerId: evaluation.partnerId?.toString(),
@@ -236,6 +240,8 @@ export async function listEvaluations(
       results: evaluation.results ? {
         score: evaluation.results.score,
         summary: evaluation.results.summary,
+        recommendations: evaluation.results.recommendations,
+        conclusion: evaluation.results.conclusion,
         evaluatedAt: evaluation.results.evaluatedAt
       } : undefined,
       createdAt: evaluation.createdAt
