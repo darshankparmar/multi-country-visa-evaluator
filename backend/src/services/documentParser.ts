@@ -4,6 +4,7 @@ import pdfParse from 'pdf-parse';
 import mammoth from 'mammoth';
 import { logger } from '../config/logger';
 import { getConfig } from '../config/environment';
+import { sanitizeForLogging } from '../utils/piiSanitizer';
 
 /**
  * Interface representing a parsed document with extracted text
@@ -51,7 +52,8 @@ export class DocumentParser {
     const startTime = Date.now();
     
     logger.info('Starting document parsing', {
-      documentCount: documents.length
+      documentCount: documents.length,
+      documentTypes: documents.map(d => path.extname(d.originalName).toLowerCase())
     });
 
     // Parse all documents in parallel
@@ -59,23 +61,81 @@ export class DocumentParser {
       documents.map(doc => this.parseDocument(doc.path, doc.filename, doc.originalName))
     );
 
-    // Calculate statistics
+    // Calculate detailed statistics
     const successCount = parsedDocuments.filter(d => d.success).length;
     const failureCount = parsedDocuments.filter(d => !d.success).length;
     const totalTextLength = parsedDocuments
       .filter(d => d.success)
       .reduce((sum, d) => sum + d.extractedText.length, 0);
     const avgTextLength = successCount > 0 ? Math.round(totalTextLength / successCount) : 0;
+    const minTextLength = successCount > 0 
+      ? Math.min(...parsedDocuments.filter(d => d.success).map(d => d.extractedText.length))
+      : 0;
+    const maxTextLength = successCount > 0 
+      ? Math.max(...parsedDocuments.filter(d => d.success).map(d => d.extractedText.length))
+      : 0;
     const duration = Date.now() - startTime;
 
+    // Group by document type for statistics
+    const typeStats = parsedDocuments.reduce((acc, doc) => {
+      const type = doc.documentType;
+      if (!acc[type]) {
+        acc[type] = { total: 0, successful: 0, failed: 0 };
+      }
+      acc[type].total++;
+      if (doc.success) {
+        acc[type].successful++;
+      } else {
+        acc[type].failed++;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; successful: number; failed: number }>);
+
+    // Log comprehensive parsing statistics
     logger.info('Document parsing completed', {
       totalDocuments: documents.length,
       successfulParses: successCount,
       failedParses: failureCount,
-      averageTextLength: avgTextLength,
-      totalTextLength,
-      durationMs: duration
+      successRate: documents.length > 0 
+        ? `${Math.round((successCount / documents.length) * 100)}%` 
+        : '0%',
+      textStatistics: {
+        totalTextLength,
+        averageTextLength: avgTextLength,
+        minTextLength,
+        maxTextLength
+      },
+      typeBreakdown: typeStats,
+      durationMs: duration,
+      averageTimePerDocument: documents.length > 0 
+        ? Math.round(duration / documents.length) 
+        : 0
     });
+
+    // Log sample of extracted text (sanitized) for audit purposes
+    if (successCount > 0) {
+      const sampleDoc = parsedDocuments.find(d => d.success);
+      if (sampleDoc) {
+        logger.debug('Sample extracted text (sanitized)', {
+          filename: sampleDoc.originalName,
+          documentType: sampleDoc.documentType,
+          textSample: sanitizeForLogging(sampleDoc.extractedText, 200)
+        });
+      }
+    }
+
+    // Log failures with details
+    const failures = parsedDocuments.filter(d => !d.success);
+    if (failures.length > 0) {
+      logger.warn('Document parsing failures detected', {
+        failureCount: failures.length,
+        failures: failures.map(f => ({
+          filename: f.originalName,
+          documentType: f.documentType,
+          error: f.error
+        }))
+      });
+    }
 
     return parsedDocuments;
   }
@@ -142,7 +202,9 @@ export class DocumentParser {
       logger.debug('Document parsed successfully', {
         filename,
         documentType,
-        textLength: extractedText.length
+        textLength: extractedText.length,
+        wasTruncated: extractedText.includes('[truncated]'),
+        textPreview: sanitizeForLogging(extractedText, 100)
       });
 
       return {

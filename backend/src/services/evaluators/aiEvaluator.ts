@@ -5,6 +5,7 @@ import { logger } from '../../config/logger';
 import { DocumentParser, ParsedDocument } from '../documentParser';
 import { getScoringConfig, VisaScoringConfig, InternalCategoryScore } from '../../config/scoringCategories';
 import { getMockResponse } from './mockAIResponses';
+import { sanitizeForLogging } from '../../utils/piiSanitizer';
 
 /**
  * AI-based evaluator implementation using OpenAI API
@@ -48,25 +49,48 @@ export class AIEvaluator implements IEvaluator {
    */
   async evaluate(params: EvaluateParams): Promise<EvaluationResult> {
     const { country, visaType, documents, userInfo } = params;
+    const evaluationStartTime = Date.now();
 
     try {
       // Get scoring configuration
       const scoringConfig = getScoringConfig(country, visaType);
       
+      logger.info('Starting AI evaluation', {
+        country,
+        visaType,
+        documentCount: documents.length,
+        applicantName: userInfo.name,
+        mockMode: this.mockMode,
+        scoringCategories: scoringConfig.categories.length
+      });
+      
       // If mock mode is enabled, return mock response
       if (this.mockMode) {
-        logger.info('Using mock AI response for evaluation', {
+        const result = this.getMockEvaluation(country, visaType, scoringConfig);
+        
+        // Log completion metrics for mock evaluation
+        this.logEvaluationCompletion({
           country,
           visaType,
-          documentCount: documents.length,
-          mockMode: true
+          result,
+          durationMs: Date.now() - evaluationStartTime,
+          mockMode: true,
+          documentCount: documents.length
         });
         
-        return this.getMockEvaluation(country, visaType, scoringConfig);
+        return result;
       }
 
       // Parse document content
+      const parseStartTime = Date.now();
       const parsedDocuments = await this.documentParser.parseDocuments(documents);
+      const parseDuration = Date.now() - parseStartTime;
+      
+      logger.info('Document parsing phase completed', {
+        durationMs: parseDuration,
+        successfulParses: parsedDocuments.filter(d => d.success).length,
+        failedParses: parsedDocuments.filter(d => !d.success).length
+      });
       
       // Create enhanced prompt with actual content
       const prompt = this.createEnhancedPrompt(
@@ -78,11 +102,14 @@ export class AIEvaluator implements IEvaluator {
       );
 
       // Call OpenAI API with retry logic
+      const apiStartTime = Date.now();
       logger.info('Calling OpenAI API for enhanced visa evaluation', {
         country,
         visaType,
+        model: this.model,
         documentCount: documents.length,
-        parsedDocuments: parsedDocuments.filter(d => d.success).length
+        parsedDocuments: parsedDocuments.filter(d => d.success).length,
+        promptLength: prompt.length
       });
 
       const response = await this.callOpenAIWithRetry([
@@ -95,29 +122,56 @@ export class AIEvaluator implements IEvaluator {
           content: prompt
         }
       ]);
+      
+      const apiDuration = Date.now() - apiStartTime;
+
+      // Log OpenAI API usage and cost
+      this.logOpenAIUsage(response, apiDuration);
 
       // Parse structured response
       const result = this.parseEnhancedResponse(response, scoringConfig);
 
-      logger.info('Enhanced AI evaluation completed', {
+      // Log evaluation completion metrics
+      this.logEvaluationCompletion({
         country,
         visaType,
-        score: result.score,
-        hasRecommendations: !!result.recommendations,
-        hasConclusion: !!result.conclusion
+        result,
+        durationMs: Date.now() - evaluationStartTime,
+        mockMode: false,
+        documentCount: documents.length,
+        parseDurationMs: parseDuration,
+        apiDurationMs: apiDuration
       });
 
       return result;
 
     } catch (error) {
+      const errorDuration = Date.now() - evaluationStartTime;
+      
       logger.error('Enhanced AI evaluation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
         country,
-        visaType
+        visaType,
+        durationMs: errorDuration,
+        documentCount: documents.length
       });
 
       // Fallback to basic evaluation on error
-      return this.fallbackEvaluation(params);
+      const fallbackResult = this.fallbackEvaluation(params);
+      
+      // Log fallback evaluation completion
+      this.logEvaluationCompletion({
+        country,
+        visaType,
+        result: fallbackResult,
+        durationMs: Date.now() - evaluationStartTime,
+        mockMode: false,
+        documentCount: documents.length,
+        usedFallback: true
+      });
+      
+      return fallbackResult;
     }
   }
 
@@ -138,14 +192,24 @@ export class AIEvaluator implements IEvaluator {
     const finalScore = this.calculateWeightedScore(categoryScores);
     
     // Log category breakdown for internal audit (same as real evaluations)
-    logger.info('Mock evaluation - Category scores calculated', {
-      categories: categoryScores.map(c => ({ 
+    logger.info('Mock evaluation - Category scores calculated (internal audit only)', {
+      categoryBreakdown: categoryScores.map(c => ({ 
         category: c.category, 
-        score: c.score, 
-        weight: c.weight 
+        score: c.score,
+        weight: c.weight,
+        weightedScore: c.weightedScore,
+        reasoning: sanitizeForLogging(c.reasoning, 100)
       })),
-      finalScore: Math.round(finalScore),
-      mockMode: true
+      scoring: {
+        finalScore: Math.round(finalScore),
+        rawScore: finalScore,
+        totalWeight: categoryScores.reduce((sum, c) => sum + c.weight, 0),
+        averageCategoryScore: Math.round(
+          categoryScores.reduce((sum, c) => sum + c.score, 0) / categoryScores.length
+        )
+      },
+      mockMode: true,
+      note: 'Category scores are for internal audit only and not exposed to users'
     });
     
     // Return only user-facing fields (same structure as real evaluations)
@@ -297,14 +361,24 @@ Ensure all category names match exactly the categories listed above.`;
         const categoryScores = this.buildCategoryScores(parsed.categoryScores, scoringConfig);
         const finalScore = this.calculateWeightedScore(categoryScores);
 
-        // Log category breakdown for internal audit
-        logger.info('Category scores calculated', {
-          categories: categoryScores.map(c => ({ 
+        // Log category breakdown for internal audit (not exposed to users)
+        logger.info('Category scores calculated (internal audit only)', {
+          categoryBreakdown: categoryScores.map(c => ({ 
             category: c.category, 
-            score: c.score, 
-            weight: c.weight 
+            score: c.score,
+            weight: c.weight,
+            weightedScore: c.weightedScore,
+            reasoning: sanitizeForLogging(c.reasoning, 100)
           })),
-          finalScore: Math.round(finalScore)
+          scoring: {
+            finalScore: Math.round(finalScore),
+            rawScore: finalScore,
+            totalWeight: categoryScores.reduce((sum, c) => sum + c.weight, 0),
+            averageCategoryScore: Math.round(
+              categoryScores.reduce((sum, c) => sum + c.score, 0) / categoryScores.length
+            )
+          },
+          note: 'Category scores are for internal audit only and not exposed to users'
         });
 
         // Return only user-facing fields
@@ -367,6 +441,8 @@ Ensure all category names match exactly the categories listed above.`;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
+        const callStartTime = Date.now();
+        
         const response = await this.openai.chat.completions.create({
           model: this.model,
           messages,
@@ -374,28 +450,139 @@ Ensure all category names match exactly the categories listed above.`;
           max_tokens: config.AI_MAX_TOKENS
         });
         
+        const callDuration = Date.now() - callStartTime;
+        
         // Log successful call
         if (attempt > 0) {
-          logger.info('OpenAI API call succeeded after retry', { attempt });
+          logger.info('OpenAI API call succeeded after retry', { 
+            attempt,
+            durationMs: callDuration
+          });
         }
         
         return response;
       } catch (error) {
         lastError = error as Error;
         logger.warn(`OpenAI API call failed (attempt ${attempt + 1}/${maxRetries + 1})`, { 
-          error: error instanceof Error ? error.message : 'Unknown error'
+          error: error instanceof Error ? error.message : 'Unknown error',
+          errorType: error instanceof Error ? error.constructor.name : 'Unknown'
         });
         
         if (attempt < maxRetries) {
           // Exponential backoff: 1s, 2s
           const delay = 1000 * Math.pow(2, attempt);
-          logger.info(`Retrying OpenAI API call in ${delay}ms`);
+          logger.info(`Retrying OpenAI API call in ${delay}ms`, {
+            nextAttempt: attempt + 2,
+            maxAttempts: maxRetries + 1
+          });
           await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
     }
     
     throw lastError;
+  }
+
+  /**
+   * Log OpenAI API usage statistics including token usage and estimated cost
+   * Helps track API consumption and costs for monitoring and optimization
+   */
+  private logOpenAIUsage(
+    response: OpenAI.Chat.Completions.ChatCompletion,
+    durationMs: number
+  ): void {
+    const usage = response.usage;
+    
+    if (!usage) {
+      logger.warn('OpenAI response missing usage data');
+      return;
+    }
+
+    // Calculate estimated cost based on GPT-4 pricing
+    // GPT-4: $0.03 per 1K prompt tokens, $0.06 per 1K completion tokens
+    // GPT-4-turbo: $0.01 per 1K prompt tokens, $0.03 per 1K completion tokens
+    const isGPT4Turbo = this.model.includes('turbo');
+    const promptCostPer1K = isGPT4Turbo ? 0.01 : 0.03;
+    const completionCostPer1K = isGPT4Turbo ? 0.03 : 0.06;
+    
+    const promptCost = (usage.prompt_tokens / 1000) * promptCostPer1K;
+    const completionCost = (usage.completion_tokens / 1000) * completionCostPer1K;
+    const totalCost = promptCost + completionCost;
+
+    logger.info('OpenAI API usage and cost', {
+      model: this.model,
+      usage: {
+        promptTokens: usage.prompt_tokens,
+        completionTokens: usage.completion_tokens,
+        totalTokens: usage.total_tokens
+      },
+      cost: {
+        promptCost: `$${promptCost.toFixed(4)}`,
+        completionCost: `$${completionCost.toFixed(4)}`,
+        totalCost: `$${totalCost.toFixed(4)}`,
+        currency: 'USD'
+      },
+      performance: {
+        durationMs,
+        tokensPerSecond: Math.round((usage.total_tokens / durationMs) * 1000)
+      },
+      timestamp: new Date().toISOString()
+    });
+  }
+
+  /**
+   * Log comprehensive evaluation completion metrics
+   * Provides audit trail and performance monitoring data
+   */
+  private logEvaluationCompletion(params: {
+    country: string;
+    visaType: string;
+    result: EvaluationResult;
+    durationMs: number;
+    mockMode: boolean;
+    documentCount: number;
+    parseDurationMs?: number;
+    apiDurationMs?: number;
+    usedFallback?: boolean;
+  }): void {
+    const {
+      country,
+      visaType,
+      result,
+      durationMs,
+      mockMode,
+      documentCount,
+      parseDurationMs,
+      apiDurationMs,
+      usedFallback
+    } = params;
+
+    logger.info('Evaluation completed successfully', {
+      evaluation: {
+        country,
+        visaType,
+        score: result.score,
+        hasRecommendations: !!result.recommendations,
+        recommendationCount: result.recommendations?.length || 0,
+        hasConclusion: !!result.conclusion,
+        hasSummary: !!result.summary,
+        summaryLength: result.summary?.length || 0
+      },
+      performance: {
+        totalDurationMs: durationMs,
+        parseDurationMs: parseDurationMs || 0,
+        apiDurationMs: apiDurationMs || 0,
+        otherDurationMs: durationMs - (parseDurationMs || 0) - (apiDurationMs || 0)
+      },
+      metadata: {
+        documentCount,
+        mockMode,
+        usedFallback: usedFallback || false,
+        timestamp: new Date().toISOString()
+      },
+      // Sanitized summary preview for audit
+      summaryPreview: result.summary ? sanitizeForLogging(result.summary, 150) : null
+    });
   }
 
   /**
