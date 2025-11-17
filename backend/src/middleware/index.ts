@@ -6,7 +6,8 @@
 export { authenticatePartner, optionalAuthentication } from './auth';
 export { errorHandler, notFoundHandler, asyncHandler } from './errorHandler';
 export { requestLogger, errorLogger } from './requestLogger';
-export { upload } from './upload';
+export { requestTimeout } from './timeout';
+export { default as upload, uploadDocuments, uploadSingleDocument } from './upload';
 export {
   validateRequest,
   validateFileUpload,
