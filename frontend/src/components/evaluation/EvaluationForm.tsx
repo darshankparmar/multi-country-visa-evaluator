@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useEvaluationContext } from '../../context/EvaluationContext'
 import { StepIndicator } from './StepIndicator'
@@ -21,28 +21,29 @@ export const EvaluationForm: React.FC = () => {
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleNext = () => {
+  // Memoize event handlers with useCallback
+  const handleNext = useCallback(() => {
     if (currentStep < STEPS.length - 1) {
       setCurrentStep(currentStep + 1)
       // Scroll to top when changing steps
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }
+  }, [currentStep, setCurrentStep])
 
-  const handleBack = () => {
+  const handleBack = useCallback(() => {
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1)
       // Scroll to top when changing steps
       window.scrollTo({ top: 0, behavior: 'smooth' })
     }
-  }
+  }, [currentStep, setCurrentStep])
 
-  const handleEdit = (step: number) => {
+  const handleEdit = useCallback((step: number) => {
     setCurrentStep(step)
     window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  }, [setCurrentStep])
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     setLoading(true)
     try {
       const response = await evaluationApi.submitEvaluation({
@@ -69,9 +70,10 @@ export const EvaluationForm: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [formData, navigate, resetForm])
 
-  const renderCurrentStep = () => {
+  // Memoize current step component
+  const currentStepComponent = useMemo(() => {
     switch (currentStep) {
       case 0:
         return <PersonalInfoStep onNext={handleNext} />
@@ -91,7 +93,7 @@ export const EvaluationForm: React.FC = () => {
       default:
         return null
     }
-  }
+  }, [currentStep, handleNext, handleBack, handleSubmit, handleEdit, loading])
 
   return (
     <div className="bg-white rounded-lg shadow-lg p-4 sm:p-6 lg:p-8">
@@ -101,7 +103,7 @@ export const EvaluationForm: React.FC = () => {
       </div>
 
       {/* Current Step Content */}
-      <div className="mt-6 sm:mt-8">{renderCurrentStep()}</div>
+      <div className="mt-6 sm:mt-8">{currentStepComponent}</div>
     </div>
   )
 }

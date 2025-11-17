@@ -2,7 +2,7 @@ import React from 'react'
 import { EvaluationProvider } from '../context/EvaluationContext'
 import { EvaluationForm } from '../components/evaluation/EvaluationForm'
 
-export const EvaluationPage: React.FC = () => {
+const EvaluationPage: React.FC = () => {
   return (
     <EvaluationProvider>
       <div className="min-h-screen bg-gray-50 py-6 sm:py-8">
@@ -18,3 +18,5 @@ export const EvaluationPage: React.FC = () => {
     </EvaluationProvider>
   )
 }
+
+export default EvaluationPage

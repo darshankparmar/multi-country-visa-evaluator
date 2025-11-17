@@ -11,7 +11,7 @@ interface StepIndicatorProps {
   currentStep: number
 }
 
-export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep }) => {
+export const StepIndicator: React.FC<StepIndicatorProps> = React.memo(({ steps, currentStep }) => {
   return (
     <nav aria-label="Progress">
       <ol className="flex items-center justify-between w-full gap-2">
@@ -73,4 +73,4 @@ export const StepIndicator: React.FC<StepIndicatorProps> = ({ steps, currentStep
       </ol>
     </nav>
   )
-}
+})

@@ -4,7 +4,7 @@ import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
 import { evaluationIdSchema } from '../utils/validation'
 
-export const SearchPage: React.FC = () => {
+const SearchPage: React.FC = () => {
   const navigate = useNavigate()
   const [evaluationId, setEvaluationId] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -84,3 +84,5 @@ export const SearchPage: React.FC = () => {
     </div>
   )
 }
+
+export default SearchPage

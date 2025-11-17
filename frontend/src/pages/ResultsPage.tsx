@@ -6,7 +6,7 @@ import { LoadingSpinner } from '../components/common/LoadingSpinner'
 import { ErrorMessage } from '../components/common/ErrorMessage'
 import type { EvaluationDetail } from '../api/types'
 
-export const ResultsPage: React.FC = () => {
+const ResultsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const navigate = useNavigate()
@@ -62,3 +62,5 @@ export const ResultsPage: React.FC = () => {
     </div>
   )
 }
+
+export default ResultsPage

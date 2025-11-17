@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScoreCard } from './ScoreCard'
 import { SummarySection } from './SummarySection'
@@ -9,7 +9,7 @@ interface ResultsDisplayProps {
   evaluation: EvaluationDetail
 }
 
-export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ evaluation }) => {
+export const ResultsDisplay: React.FC<ResultsDisplayProps> = React.memo(({ evaluation }) => {
   const navigate = useNavigate()
 
   // Defensive check for results
@@ -35,15 +35,16 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = ({ evaluation }) =>
     )
   }
 
-  const handleNewEvaluation = () => {
+  // Memoize event handlers
+  const handleNewEvaluation = useCallback(() => {
     navigate('/evaluation')
-  }
+  }, [navigate])
 
-  const handleBackHome = () => {
+  const handleBackHome = useCallback(() => {
     navigate('/')
-  }
+  }, [navigate])
 
-  const handleDownloadResults = () => {
+  const handleDownloadResults = useCallback(() => {
     // Optional: Implement download functionality
     const resultText = `
 Visa Evaluation Results
@@ -76,7 +77,13 @@ ${evaluation.results.summary}
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-  }
+  }, [evaluation])
+
+  // Memoize formatted date
+  const formattedDate = useMemo(
+    () => new Date(evaluation.results.evaluatedAt).toLocaleString(),
+    [evaluation.results.evaluatedAt]
+  )
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6">
@@ -114,7 +121,7 @@ ${evaluation.results.summary}
             <div>
               <dt className="text-sm text-gray-600">Evaluated At</dt>
               <dd className="font-medium text-gray-900 text-sm">
-                {new Date(evaluation.results.evaluatedAt).toLocaleString()}
+                {formattedDate}
               </dd>
             </div>
           </dl>
@@ -128,4 +135,4 @@ ${evaluation.results.summary}
       </div>
     </div>
   )
-}
+})

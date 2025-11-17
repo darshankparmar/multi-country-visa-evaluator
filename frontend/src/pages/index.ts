@@ -1,5 +1,0 @@
-export { HomePage } from './HomePage'
-export { EvaluationPage } from './EvaluationPage'
-export { ResultsPage } from './ResultsPage'
-export { SearchPage } from './SearchPage'
-export { NotFoundPage } from './NotFoundPage'

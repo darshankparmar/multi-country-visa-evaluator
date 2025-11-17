@@ -1,24 +1,33 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/layout/Layout'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import { HomePage } from './pages/HomePage'
-import { EvaluationPage } from './pages/EvaluationPage'
-import { ResultsPage } from './pages/ResultsPage'
-import { SearchPage } from './pages/SearchPage'
-import { NotFoundPage } from './pages/NotFoundPage'
+import { LoadingSpinner } from './components/common/LoadingSpinner'
+
+const HomePage = lazy(() => import('./pages/HomePage'))
+const EvaluationPage = lazy(() => import('./pages/EvaluationPage'))
+const ResultsPage = lazy(() => import('./pages/ResultsPage'))
+const SearchPage = lazy(() => import('./pages/SearchPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function App() {
   return (
     <ErrorBoundary>
       <BrowserRouter>
         <Layout>
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/evaluation" element={<EvaluationPage />} />
-            <Route path="/results/:id" element={<ResultsPage />} />
-            <Route path="/search" element={<SearchPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-screen-75">
+              <LoadingSpinner size="lg" text="Loading..." />
+            </div>
+          }>
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/evaluation" element={<EvaluationPage />} />
+              <Route path="/results/:id" element={<ResultsPage />} />
+              <Route path="/search" element={<SearchPage />} />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </Suspense>
         </Layout>
       </BrowserRouter>
     </ErrorBoundary>

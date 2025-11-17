@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: 'primary' | 'outline' | 'ghost'
@@ -7,7 +7,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children: React.ReactNode
 }
 
-export const Button: React.FC<ButtonProps> = ({
+export const Button: React.FC<ButtonProps> = React.memo(({
   variant = 'primary',
   size = 'md',
   loading = false,
@@ -31,7 +31,11 @@ export const Button: React.FC<ButtonProps> = ({
     lg: 'px-6 py-3 text-lg min-h-[48px]'
   }
   
-  const combinedClassName = `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`
+  // Memoize combined className
+  const combinedClassName = useMemo(
+    () => `${baseStyles} ${variantStyles[variant]} ${sizeStyles[size]} ${className}`,
+    [variant, size, className]
+  )
   
   return (
     <button
@@ -53,4 +57,4 @@ export const Button: React.FC<ButtonProps> = ({
       )}
     </button>
   )
-}
+})

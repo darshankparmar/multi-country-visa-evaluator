@@ -18,7 +18,7 @@ const FeatureCard: React.FC<FeatureCardProps> = ({ icon, title, description }) =
   )
 }
 
-export const HomePage: React.FC = () => {
+const HomePage: React.FC = () => {
   const navigate = useNavigate()
 
   return (
@@ -66,3 +66,5 @@ export const HomePage: React.FC = () => {
     </div>
   )
 }
+
+export default HomePage
