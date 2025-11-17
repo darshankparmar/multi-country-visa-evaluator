@@ -15,8 +15,8 @@ export const visaTypesApi = {
     }
 
     const data = await apiClient.get<VisaType[]>('/visa-types')
-    cache.set(cacheKey, data as VisaType[])
-    return data as VisaType[]
+    cache.set(cacheKey, data)
+    return data
   },
 
   /**
@@ -28,8 +28,8 @@ export const visaTypesApi = {
     }
 
     const data = await apiClient.get<VisaType[]>(`/visa-types/${encodeURIComponent(country)}`)
-    cache.set(country, data as VisaType[])
-    return data as VisaType[]
+    cache.set(country, data)
+    return data
   },
 
   /**
