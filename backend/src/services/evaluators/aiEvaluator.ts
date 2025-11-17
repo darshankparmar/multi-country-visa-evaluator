@@ -4,26 +4,39 @@ import { getConfig } from '../../config/environment';
 import { logger } from '../../config/logger';
 import { DocumentParser, ParsedDocument } from '../documentParser';
 import { getScoringConfig, VisaScoringConfig, InternalCategoryScore } from '../../config/scoringCategories';
+import { getMockResponse } from './mockAIResponses';
 
 /**
  * AI-based evaluator implementation using OpenAI API
  * Analyzes visa applications using GPT models for intelligent scoring
+ * Supports mock mode for cost-free testing and development
  */
 export class AIEvaluator implements IEvaluator {
-  private openai: OpenAI;
+  private openai: OpenAI | null;
   private model: string;
   private documentParser: DocumentParser;
+  private mockMode: boolean;
 
   constructor() {
     const config = getConfig();
     
-    if (!config.OPENAI_API_KEY) {
-      throw new Error('OPENAI_API_KEY is required for AI evaluator');
-    }
+    // Check if mock mode is enabled
+    this.mockMode = config.USE_MOCK_AI;
+    
+    if (this.mockMode) {
+      logger.info('AI Evaluator initialized in MOCK mode - no OpenAI API calls will be made');
+      this.openai = null;
+    } else {
+      if (!config.OPENAI_API_KEY) {
+        throw new Error('OPENAI_API_KEY is required for AI evaluator');
+      }
 
-    this.openai = new OpenAI({
-      apiKey: config.OPENAI_API_KEY
-    });
+      this.openai = new OpenAI({
+        apiKey: config.OPENAI_API_KEY
+      });
+      
+      logger.info('AI Evaluator initialized with OpenAI API');
+    }
     
     this.model = config.AI_MODEL || 'gpt-4';
     this.documentParser = new DocumentParser();
@@ -31,16 +44,29 @@ export class AIEvaluator implements IEvaluator {
 
   /**
    * Evaluate visa application using AI analysis with document parsing
+   * Uses mock responses when mockMode is enabled
    */
   async evaluate(params: EvaluateParams): Promise<EvaluationResult> {
     const { country, visaType, documents, userInfo } = params;
 
     try {
-      // Parse document content
-      const parsedDocuments = await this.documentParser.parseDocuments(documents);
-      
       // Get scoring configuration
       const scoringConfig = getScoringConfig(country, visaType);
+      
+      // If mock mode is enabled, return mock response
+      if (this.mockMode) {
+        logger.info('Using mock AI response for evaluation', {
+          country,
+          visaType,
+          documentCount: documents.length,
+          mockMode: true
+        });
+        
+        return this.getMockEvaluation(country, visaType, scoringConfig);
+      }
+
+      // Parse document content
+      const parsedDocuments = await this.documentParser.parseDocuments(documents);
       
       // Create enhanced prompt with actual content
       const prompt = this.createEnhancedPrompt(
@@ -93,6 +119,42 @@ export class AIEvaluator implements IEvaluator {
       // Fallback to basic evaluation on error
       return this.fallbackEvaluation(params);
     }
+  }
+
+  /**
+   * Generate mock evaluation response for testing
+   * Returns predefined evaluation without calling OpenAI API
+   */
+  private getMockEvaluation(
+    country: string,
+    visaType: string,
+    scoringConfig: VisaScoringConfig
+  ): EvaluationResult {
+    // Get mock response data
+    const mockData = getMockResponse(country, visaType);
+    
+    // Build category scores using the same logic as real evaluations
+    const categoryScores = this.buildCategoryScores(mockData.categoryScores, scoringConfig);
+    const finalScore = this.calculateWeightedScore(categoryScores);
+    
+    // Log category breakdown for internal audit (same as real evaluations)
+    logger.info('Mock evaluation - Category scores calculated', {
+      categories: categoryScores.map(c => ({ 
+        category: c.category, 
+        score: c.score, 
+        weight: c.weight 
+      })),
+      finalScore: Math.round(finalScore),
+      mockMode: true
+    });
+    
+    // Return only user-facing fields (same structure as real evaluations)
+    return {
+      score: Math.round(finalScore),
+      summary: mockData.summary,
+      recommendations: mockData.recommendations,
+      conclusion: mockData.conclusion
+    };
   }
 
   /**
@@ -295,6 +357,10 @@ Ensure all category names match exactly the categories listed above.`;
    * Retries up to 2 times on failure
    */
   private async callOpenAIWithRetry(messages: any[], maxRetries = 2): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+    if (!this.openai) {
+      throw new Error('OpenAI client not initialized - mock mode should be handled before calling this method');
+    }
+    
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
