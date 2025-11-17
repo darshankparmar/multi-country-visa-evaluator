@@ -122,7 +122,16 @@ Submit a new visa evaluation with user information and documents.
 | visaType | string | Yes | Visa type name (e.g., "Critical Skills Employment Permit") |
 | documents | file[] | Yes | Array of document files (max 5MB each) |
 
-**Request Example**:
+**Partner Association**:
+
+When the `x-api-key` header is provided with a valid partner API key, the evaluation will be automatically associated with that partner. This allows partners to:
+- Track evaluations submitted through their integration
+- Retrieve all their associated evaluations via `GET /api/evaluations`
+- Monitor conversion rates and user engagement
+
+Evaluations submitted without an API key are still processed normally but are not associated with any partner.
+
+**Request Example (Public Submission)**:
 ```bash
 curl -X POST http://localhost:3000/api/evaluations \
   -F "name=John Doe" \
@@ -134,7 +143,7 @@ curl -X POST http://localhost:3000/api/evaluations \
   -F "documents=@employment_contract.pdf"
 ```
 
-**With Partner API Key**:
+**Request Example (Partner Submission)**:
 ```bash
 curl -X POST http://localhost:3000/api/evaluations \
   -H "x-api-key: your-api-key-here" \
@@ -162,11 +171,12 @@ curl -X POST http://localhost:3000/api/evaluations \
       "country": "Ireland",
       "visaType": "Critical Skills Employment Permit"
     },
-    "documentsSubmitted": 3,
     "createdAt": "2025-11-17T10:30:00.000Z"
   }
 }
 ```
+
+**Note**: The response does not include the `partnerId` field for privacy reasons, but the evaluation is internally associated with the partner if an API key was provided.
 
 **Error Response** (400 Bad Request):
 ```json
@@ -200,6 +210,7 @@ curl -X POST http://localhost:3000/api/evaluations \
 - Request timeout: 30 seconds
 - Email notification sent automatically if SMTP is configured
 - Score is capped at configured SUCCESS_CAP (default: 85)
+- If `x-api-key` header is provided, the evaluation is associated with the partner for tracking purposes
 
 ---
 
@@ -271,7 +282,7 @@ curl http://localhost:3000/api/evaluations/550e8400-e29b-41d4-a716-446655440000
 
 ### List Partner Evaluations
 
-Retrieve all evaluations associated with a partner's API key.
+Retrieve all evaluations associated with a partner's API key. This endpoint returns only evaluations that were submitted with the partner's API key in the `x-api-key` header during the `POST /api/evaluations` request.
 
 **Endpoint**: `GET /api/evaluations`
 
@@ -285,6 +296,10 @@ Retrieve all evaluations associated with a partner's API key.
 | limit | number | No | 20 | Number of results per page (max: 100) |
 | startDate | string | No | - | Filter by creation date (ISO 8601 format) |
 | endDate | string | No | - | Filter by creation date (ISO 8601 format) |
+
+**Partner Association**:
+
+Only evaluations that were submitted with the partner's API key will be returned. Evaluations submitted without an API key or with a different partner's API key will not be included in the results.
 
 **Request Example**:
 ```bash

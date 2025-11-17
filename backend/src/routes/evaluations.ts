@@ -4,7 +4,7 @@ import {
   getEvaluation,
   listEvaluations
 } from '../controllers/evaluationController';
-import { authenticatePartner } from '../middleware/auth';
+import { authenticatePartner, optionalAuthentication } from '../middleware/auth';
 import { uploadDocuments } from '../middleware/upload';
 import {
   validateRequest,
@@ -26,12 +26,14 @@ const router = Router();
  * - Validates request body and file uploads
  * - 30-second timeout for processing
  * - Optional partner authentication (if x-api-key provided)
+ * - If authenticated, evaluation is associated with the partner
  * 
  * Note: Using middleware wrapper to support hot-reload in development
  */
 router.post(
   '/',
   (req, res, next) => requestTimeout(getConfig().REQUEST_TIMEOUT_MS)(req, res, next),
+  optionalAuthentication, // Optional partner authentication
   uploadDocuments, // Handle file uploads
   validateRequest(createEvaluationSchema, 'body'), // Validate body
   validateFileUpload(true, 1, 10), // Validate at least 1 file, max 10
