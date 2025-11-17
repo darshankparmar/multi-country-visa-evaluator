@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useLocation, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { evaluationApi } from '../api/evaluations'
 import { ResultsDisplay } from '../components/results/ResultsDisplay'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
@@ -8,17 +8,16 @@ import type { EvaluationDetail } from '../api/types'
 
 const ResultsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>()
-  const location = useLocation()
   const navigate = useNavigate()
-  const [evaluation, setEvaluation] = useState<EvaluationDetail | null>(
-    location.state?.evaluation || null
-  )
-  const [loading, setLoading] = useState(!location.state?.evaluation)
+  const [evaluation, setEvaluation] = useState<EvaluationDetail | null>(null)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!evaluation && id) {
+    if (id) {
       const fetchEvaluation = async () => {
+        setLoading(true)
+        setError(null)
         try {
           const data = await evaluationApi.getEvaluationById(id)
           setEvaluation(data)
@@ -29,8 +28,11 @@ const ResultsPage: React.FC = () => {
         }
       }
       fetchEvaluation()
+    } else {
+      setLoading(false)
+      setError('No evaluation ID provided')
     }
-  }, [id, evaluation])
+  }, [id])
 
   if (loading) {
     return (
