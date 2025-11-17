@@ -68,6 +68,16 @@ Documents Submitted: ${evaluation.documents.length}
 
 Summary:
 ${evaluation.results.summary}
+
+${evaluation.results.recommendations && evaluation.results.recommendations.length > 0 ? `
+Recommendations:
+${evaluation.results.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join('\n')}
+` : ''}
+
+${evaluation.results.conclusion ? `
+Conclusion:
+${evaluation.results.conclusion}
+` : ''}
     `.trim()
 
     const blob = new Blob([resultText], { type: 'text/plain' })
