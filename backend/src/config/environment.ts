@@ -22,6 +22,7 @@ const envSchema = z.object({
     z.number().min(0).max(100)
   ),
   EVALUATOR_TYPE: z.enum(['rule-based', 'ai']).default('rule-based'),
+  REQUEST_TIMEOUT_MS: z.string().default('30000').transform(Number), // 30 seconds default
 
   // AI Service Configuration (conditional based on EVALUATOR_TYPE)
   OPENAI_API_KEY: z.string().optional(),

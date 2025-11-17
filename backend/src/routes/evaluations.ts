@@ -14,8 +14,10 @@ import {
   validateFileUpload
 } from '../middleware/validation';
 import { requestTimeout } from '../middleware/timeout';
+import { getConfig } from '../config/environment';
 
 const router = Router();
+const config = getConfig();
 
 /**
  * POST /api/evaluations
@@ -30,7 +32,7 @@ const router = Router();
  */
 router.post(
   '/',
-  requestTimeout(30000), // 30-second timeout
+  requestTimeout(config.REQUEST_TIMEOUT_MS), // Configurable timeout from environment
   uploadDocuments, // Handle file uploads
   validateRequest(createEvaluationSchema, 'body'), // Validate body
   validateFileUpload(true, 1, 10), // Validate at least 1 file, max 10
