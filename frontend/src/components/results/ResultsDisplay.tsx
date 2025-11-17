@@ -2,6 +2,8 @@ import React, { useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ScoreCard } from './ScoreCard'
 import { SummarySection } from './SummarySection'
+import { RecommendationsSection } from './RecommendationsSection'
+import { ConclusionSection } from './ConclusionSection'
 import { ActionButtons } from './ActionButtons'
 import type { EvaluationDetail } from '../../api/types'
 
@@ -102,6 +104,17 @@ ${evaluation.results.summary}
           visaType={evaluation.visaApplication.visaType}
           country={evaluation.visaApplication.country}
         />
+
+        {evaluation.results.recommendations && evaluation.results.recommendations.length > 0 && (
+          <RecommendationsSection recommendations={evaluation.results.recommendations} />
+        )}
+
+        {evaluation.results.conclusion && (
+          <ConclusionSection 
+            conclusion={evaluation.results.conclusion}
+            score={evaluation.results.score}
+          />
+        )}
 
         <div className="mt-6 sm:mt-8 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Application Details</h3>
