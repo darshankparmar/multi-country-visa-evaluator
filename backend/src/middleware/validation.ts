@@ -15,7 +15,7 @@ export function validateRequest(
   schema: ZodSchema,
   source: 'body' | 'query' | 'params' = 'body'
 ) {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  return async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
     try {
       // Validate the specified part of the request
       const validated = await schema.parseAsync(req[source]);
@@ -216,7 +216,7 @@ export function validateFileUpload(
   minFiles: number = 1,
   maxFiles: number = 10
 ) {
-  return (req: Request, res: Response, next: NextFunction): void => {
+  return (req: Request, _res: Response, next: NextFunction): void => {
     try {
       const files = req.files as Express.Multer.File[] | undefined;
 

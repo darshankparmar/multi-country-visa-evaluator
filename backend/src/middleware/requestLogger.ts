@@ -122,7 +122,7 @@ function sanitizeBody(body: any): any {
 export function errorLogger(
   err: Error,
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): void {
   logger.error('Request error', {

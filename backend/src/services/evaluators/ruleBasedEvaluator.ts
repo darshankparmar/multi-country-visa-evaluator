@@ -9,7 +9,7 @@ export class RuleBasedEvaluator implements IEvaluator {
    * Evaluate visa application using rule-based scoring logic
    */
   async evaluate(params: EvaluateParams): Promise<EvaluationResult> {
-    const { country, visaType, documents, userInfo } = params;
+    const { country, visaType, documents } = params;
 
     // Start with base score
     let score = 50;

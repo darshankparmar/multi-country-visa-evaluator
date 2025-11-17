@@ -10,7 +10,7 @@ import { logger } from '../config/logger';
  */
 export async function authenticatePartner(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {
@@ -74,7 +74,7 @@ export async function authenticatePartner(
  */
 export async function optionalAuthentication(
   req: Request,
-  res: Response,
+  _res: Response,
   next: NextFunction
 ): Promise<void> {
   try {

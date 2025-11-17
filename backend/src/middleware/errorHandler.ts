@@ -19,7 +19,7 @@ export function errorHandler(
   err: Error,
   req: Request,
   res: Response,
-  next: NextFunction
+  _next: NextFunction
 ): void {
   // Log error with full context
   logger.error('Error occurred during request processing', {
