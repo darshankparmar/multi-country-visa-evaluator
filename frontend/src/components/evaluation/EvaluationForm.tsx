@@ -9,6 +9,9 @@ import { ReviewStep } from './ReviewStep'
 import { evaluationApi } from '../../api/evaluations'
 import { toast } from 'react-hot-toast'
 
+/**
+ * Configuration for the multi-step evaluation form
+ */
 const STEPS = [
   { id: 0, name: 'Personal Info' },
   { id: 1, name: 'Visa Selection' },
@@ -16,6 +19,34 @@ const STEPS = [
   { id: 3, name: 'Review' }
 ]
 
+/**
+ * Multi-step evaluation form component
+ * 
+ * Manages the complete visa evaluation submission flow with 4 steps:
+ * 1. Personal Information (name, email)
+ * 2. Visa Selection (country, visa type)
+ * 3. Document Upload (file uploads)
+ * 4. Review and Submit
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * // Wrap with EvaluationProvider for context
+ * <EvaluationProvider>
+ *   <EvaluationForm />
+ * </EvaluationProvider>
+ * ```
+ * 
+ * Features:
+ * - Step-by-step navigation with progress indicator
+ * - Form data persistence across steps
+ * - Validation at each step
+ * - Loading states during submission
+ * - Error handling with toast notifications
+ * - Automatic navigation to results page on success
+ * 
+ * @returns {JSX.Element} Multi-step form with current step content
+ */
 export const EvaluationForm: React.FC = () => {
   const { formData, currentStep, setCurrentStep, resetForm } = useEvaluationContext()
   const [loading, setLoading] = useState(false)

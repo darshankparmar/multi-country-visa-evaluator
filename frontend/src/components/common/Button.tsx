@@ -1,12 +1,42 @@
 import React, { useMemo } from 'react'
 
+/**
+ * Props for the Button component
+ */
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  /** Visual style variant of the button */
   variant?: 'primary' | 'outline' | 'ghost'
+  /** Size of the button */
   size?: 'sm' | 'md' | 'lg'
+  /** Whether the button is in a loading state */
   loading?: boolean
+  /** Button content */
   children: React.ReactNode
 }
 
+/**
+ * Reusable Button component with multiple variants and sizes
+ * 
+ * @component
+ * @example
+ * ```tsx
+ * // Primary button
+ * <Button onClick={handleClick}>Submit</Button>
+ * 
+ * // Outline button with loading state
+ * <Button variant="outline" loading={isLoading}>
+ *   Save
+ * </Button>
+ * 
+ * // Large ghost button
+ * <Button variant="ghost" size="lg">
+ *   Cancel
+ * </Button>
+ * ```
+ * 
+ * @param {ButtonProps} props - Component props
+ * @returns {JSX.Element} Rendered button element
+ */
 export const Button: React.FC<ButtonProps> = React.memo(({
   variant = 'primary',
   size = 'md',

@@ -1,12 +1,23 @@
 import axios, { type AxiosInstance, type AxiosError, type InternalAxiosRequestConfig } from 'axios'
 
+/**
+ * Base URL for API requests, configured via environment variable
+ * Falls back to localhost:3000 if not set
+ */
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/api'
 
-// Create a custom type that returns data directly instead of AxiosResponse
+/**
+ * Custom API client interface that returns data directly instead of AxiosResponse
+ * This simplifies API calls by unwrapping the response automatically
+ */
 interface ApiClient {
+  /** GET request */
   get<T>(url: string, config?: any): Promise<T>
+  /** POST request */
   post<T>(url: string, data?: any, config?: any): Promise<T>
+  /** PUT request */
   put<T>(url: string, data?: any, config?: any): Promise<T>
+  /** DELETE request */
   delete<T>(url: string, config?: any): Promise<T>
 }
 
@@ -29,6 +40,14 @@ axiosInstance.interceptors.request.use(
 
 /**
  * Map API errors to user-friendly messages
+ * 
+ * Handles various error scenarios:
+ * - Network errors (no connection, timeout)
+ * - HTTP status codes (400, 401, 403, 404, 500, etc.)
+ * - Custom backend error messages
+ * 
+ * @param {AxiosError} error - Axios error object
+ * @returns {string} User-friendly error message
  */
 const getErrorMessage = (error: AxiosError): string => {
   // Network errors (no response from server)
@@ -103,5 +122,28 @@ axiosInstance.interceptors.response.use(
   }
 )
 
-// Export with proper typing that reflects the interceptor behavior
+/**
+ * Configured Axios client for API requests
+ * 
+ * Features:
+ * - Automatic request/response logging
+ * - Error handling with user-friendly messages
+ * - 30-second timeout
+ * - Automatic response unwrapping (returns data directly)
+ * - Backend response format handling ({ status: 'success', data: ... })
+ * 
+ * @example
+ * ```typescript
+ * // GET request
+ * const data = await apiClient.get<User[]>('/users')
+ * 
+ * // POST request
+ * const result = await apiClient.post<CreateResponse>('/users', { name: 'John' })
+ * 
+ * // With custom headers
+ * const data = await apiClient.get('/protected', {
+ *   headers: { Authorization: 'Bearer token' }
+ * })
+ * ```
+ */
 export const apiClient = axiosInstance as unknown as ApiClient
