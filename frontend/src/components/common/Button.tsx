@@ -14,6 +14,7 @@ export const Button: React.FC<ButtonProps> = ({
   disabled,
   children,
   className = '',
+  type = 'button',
   ...props
 }) => {
   const baseStyles = 'font-medium rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
@@ -34,6 +35,7 @@ export const Button: React.FC<ButtonProps> = ({
   
   return (
     <button
+      type={type}
       className={combinedClassName}
       disabled={disabled || loading}
       {...props}

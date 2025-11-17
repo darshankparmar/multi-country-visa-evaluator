@@ -76,7 +76,15 @@ const getErrorMessage = (error: AxiosError): string => {
 
 // Response interceptor for error handling
 axiosInstance.interceptors.response.use(
-  (response) => response.data,
+  (response) => {
+    // Backend wraps responses in { status: 'success', data: ... }
+    // Extract the actual data from the wrapper
+    if (response.data && response.data.status === 'success') {
+      return response.data.data
+    }
+    // Fallback to returning the entire response data if structure is different
+    return response.data
+  },
   (error: AxiosError) => {
     const message = getErrorMessage(error)
     
