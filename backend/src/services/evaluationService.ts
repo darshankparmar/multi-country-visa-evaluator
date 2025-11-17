@@ -154,7 +154,9 @@ export class EvaluationService {
       const updatedEvaluation = await this.evaluationRepository.updateResults(
         evaluation.evaluationId,
         cappedScore,
-        evaluationResult.summary
+        evaluationResult.summary,
+        evaluationResult.recommendations,
+        evaluationResult.conclusion
       );
 
       if (!updatedEvaluation) {
@@ -167,7 +169,9 @@ export class EvaluationService {
         name,
         score: cappedScore,
         summary: evaluationResult.summary,
-        evaluationId: evaluation.evaluationId
+        evaluationId: evaluation.evaluationId,
+        recommendations: evaluationResult.recommendations,
+        conclusion: evaluationResult.conclusion
       }).catch(error => {
         // Email errors are logged but don't fail the evaluation
         logger.error('Email notification failed', {
@@ -293,6 +297,8 @@ export class EvaluationService {
     score: number;
     summary: string;
     evaluationId: string;
+    recommendations?: string[];
+    conclusion?: string;
   }): Promise<void> {
     try {
       await this.emailService.sendEvaluationResults(params);

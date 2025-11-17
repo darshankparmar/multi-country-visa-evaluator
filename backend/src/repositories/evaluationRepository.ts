@@ -87,22 +87,36 @@ export class EvaluationRepository {
    * @param evaluationId - Unique evaluation identifier
    * @param score - Evaluation score (0-100)
    * @param summary - Evaluation summary text
+   * @param recommendations - Optional array of recommendations
+   * @param conclusion - Optional conclusion text
    * @returns Updated evaluation document or null if not found
    */
   async updateResults(
     evaluationId: string,
     score: number,
-    summary: string
+    summary: string,
+    recommendations?: string[],
+    conclusion?: string
   ): Promise<IEvaluation | null> {
+    const results: any = {
+      score,
+      summary,
+      evaluatedAt: new Date()
+    };
+
+    // Only include recommendations and conclusion if provided
+    if (recommendations !== undefined) {
+      results.recommendations = recommendations;
+    }
+    if (conclusion !== undefined) {
+      results.conclusion = conclusion;
+    }
+
     return await Evaluation.findOneAndUpdate(
       { evaluationId },
       {
         $set: {
-          results: {
-            score,
-            summary,
-            evaluatedAt: new Date()
-          }
+          results
         }
       },
       { new: true, runValidators: true }

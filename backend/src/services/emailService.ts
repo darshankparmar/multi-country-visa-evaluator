@@ -11,6 +11,8 @@ export interface EmailParams {
   score: number;
   summary: string;
   evaluationId: string;
+  recommendations?: string[];
+  conclusion?: string;
 }
 
 /**
@@ -121,10 +123,36 @@ export class EmailService {
    * @private
    */
   private generateEmailTemplate(params: Omit<EmailParams, 'email'>): string {
-    const { name, score, summary, evaluationId } = params;
+    const { name, score, summary, evaluationId, recommendations, conclusion } = params;
 
     // Determine score color based on value
     const scoreColor = score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
+
+    // Generate recommendations HTML if available
+    const recommendationsHtml = recommendations && recommendations.length > 0 ? `
+              <!-- Recommendations -->
+              <div style="margin-bottom: 30px;">
+                <h2 style="margin: 0 0 15px; color: #1f2937; font-size: 20px; font-weight: bold;">
+                  Recommendations
+                </h2>
+                <ul style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+${recommendations.map(rec => `                  <li style="margin-bottom: 8px;">${rec}</li>`).join('\n')}
+                </ul>
+              </div>
+              ` : '';
+
+    // Generate conclusion HTML if available
+    const conclusionHtml = conclusion ? `
+              <!-- Conclusion -->
+              <div style="margin-bottom: 30px;">
+                <h2 style="margin: 0 0 15px; color: #1f2937; font-size: 20px; font-weight: bold;">
+                  Conclusion
+                </h2>
+                <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
+                  ${conclusion}
+                </p>
+              </div>
+              ` : '';
 
     return `
 <!DOCTYPE html>
@@ -182,7 +210,7 @@ export class EmailService {
 ${summary}
                 </p>
               </div>
-              
+              ${recommendationsHtml}${conclusionHtml}
               <!-- Evaluation ID -->
               <div style="padding: 20px; background-color: #f9fafb; border-left: 4px solid #3b82f6; border-radius: 4px; margin-bottom: 30px;">
                 <p style="margin: 0; color: #6b7280; font-size: 13px;">
@@ -223,7 +251,17 @@ ${summary}
    * @private
    */
   private generatePlainTextEmail(params: Omit<EmailParams, 'email'>): string {
-    const { name, score, summary, evaluationId } = params;
+    const { name, score, summary, evaluationId, recommendations, conclusion } = params;
+
+    // Build recommendations section if available
+    const recommendationsText = recommendations && recommendations.length > 0
+      ? `\n\nRECOMMENDATIONS:\n${recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join('\n')}`
+      : '';
+
+    // Build conclusion section if available
+    const conclusionText = conclusion
+      ? `\n\nCONCLUSION:\n${conclusion}`
+      : '';
 
     return `
 Hello ${name},
@@ -233,7 +271,7 @@ Your visa evaluation has been completed. Here are your results:
 EVALUATION SCORE: ${score}/100
 
 EVALUATION SUMMARY:
-${summary}
+${summary}${recommendationsText}${conclusionText}
 
 Evaluation ID: ${evaluationId}
 
