@@ -21,6 +21,8 @@ export interface EvaluateParams {
 export interface EvaluationResult {
   score: number;
   summary: string;
+  recommendations?: string[];
+  conclusion?: string;
 }
 
 /**
