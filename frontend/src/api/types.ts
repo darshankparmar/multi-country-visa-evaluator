@@ -7,21 +7,18 @@ export interface EvaluationRequest {
 }
 
 export interface EvaluationResponse {
-  status: 'success'
-  data: {
-    evaluationId: string
-    score: number
-    summary: string
-    userInfo: {
-      name: string
-      email: string
-    }
-    visaApplication: {
-      country: string
-      visaType: string
-    }
-    createdAt: string
+  evaluationId: string
+  score: number
+  summary: string
+  userInfo: {
+    name: string
+    email: string
   }
+  visaApplication: {
+    country: string
+    visaType: string
+  }
+  createdAt: string
 }
 
 export interface EvaluationDetail {

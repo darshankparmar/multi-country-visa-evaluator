@@ -59,8 +59,8 @@ export const EvaluationForm: React.FC = () => {
       resetForm()
       
       // Navigate to results page with evaluation data
-      navigate(`/results/${response.data.evaluationId}`, {
-        state: { evaluation: response.data }
+      navigate(`/results/${response.evaluationId}`, {
+        state: { evaluation: response }
       })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to submit evaluation'
