@@ -154,8 +154,19 @@ Configure the following environment variables in your `.env` file:
 |----------|-------------|---------|----------|
 | `OPENAI_API_KEY` | OpenAI API key for AI-based evaluation | - | Yes (if `EVALUATOR_TYPE=ai`) |
 | `AI_MODEL` | OpenAI model to use | `gpt-4` | No |
+| `ENABLE_DOCUMENT_PARSING` | Enable text extraction from documents | `true` | No |
+| `MAX_DOCUMENT_TEXT_LENGTH` | Maximum characters per document | `10000` | No |
+| `PARSING_TIMEOUT` | Document parsing timeout (ms) | `30000` | No |
+| `AI_TEMPERATURE` | OpenAI temperature parameter (0-1) | `0.7` | No |
+| `AI_MAX_TOKENS` | Maximum tokens for OpenAI response | `2000` | No |
+| `AI_RETRY_ATTEMPTS` | Number of retry attempts for OpenAI API | `2` | No |
+| `USE_MOCK_AI` | Use mock AI responses (testing only) | `false` | No |
 
 **Note**: Only required when `EVALUATOR_TYPE` is set to `ai`. Get your API key from [OpenAI Platform](https://platform.openai.com/).
+
+**Document Parsing**: When enabled, extracts text from PDF, DOCX, and TXT files for content analysis.
+
+**Mock Mode**: Set `USE_MOCK_AI=true` for testing without API costs. See [Mock AI Mode Guide](docs/MOCK_AI_MODE.md).
 
 ### Email Configuration
 
@@ -185,6 +196,45 @@ Configure the following environment variables in your `.env` file:
 |----------|-------------|---------|----------|
 | `LOG_LEVEL` | Winston log level (`error`, `warn`, `info`, `debug`) | `info` | No |
 
+## AI Evaluation Enhancement
+
+The system supports AI-powered evaluation with document content analysis and weighted category scoring.
+
+### Key Features
+
+- **Document Content Analysis**: Extracts and analyzes text from PDF, DOCX, and TXT files
+- **Weighted Category Scoring**: Evaluates across 5 categories (Professional Qualifications, Financial Stability, Documentation Quality, Language Proficiency, Country-Specific Requirements)
+- **Detailed Recommendations**: Provides specific, actionable suggestions for improvement
+- **Mock Mode**: Cost-free testing without OpenAI API calls
+
+### Quick Start
+
+```bash
+# Enable AI evaluation
+EVALUATOR_TYPE=ai
+OPENAI_API_KEY=sk-your-key-here
+ENABLE_DOCUMENT_PARSING=true
+
+# Or use mock mode for testing
+USE_MOCK_AI=true
+```
+
+### Enhanced Response Format
+
+```json
+{
+  "score": 78,
+  "summary": "Strong application with comprehensive documentation...",
+  "recommendations": ["Obtain additional reference letters...", "..."],
+  "conclusion": "This application shows strong potential for approval..."
+}
+```
+
+For detailed information, see:
+- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Complete guide with examples and troubleshooting
+- **[Scoring Configuration](docs/SCORING_CONFIGURATION.md)**: How to configure category weights
+- **[Mock AI Mode](docs/MOCK_AI_MODE.md)**: Testing without API costs
+
 ## Development
 
 ### Running the Development Server
@@ -197,6 +247,8 @@ npm run dev
 
 The server will automatically restart when you make changes to TypeScript files.
 
+
+
 ### Project Structure
 
 ```
@@ -205,7 +257,8 @@ backend/
 │   ├── config/              # Configuration modules
 │   │   ├── database.ts      # MongoDB connection setup
 │   │   ├── environment.ts   # Environment validation with Zod
-│   │   └── logger.ts        # Winston logger configuration
+│   │   ├── logger.ts        # Winston logger configuration
+│   │   └── scoringCategories.ts  # Weighted scoring configuration
 │   ├── controllers/         # Request handlers
 │   │   ├── evaluationController.ts
 │   │   ├── partnerController.ts
@@ -233,10 +286,12 @@ backend/
 │   │   ├── evaluationService.ts  # Core evaluation workflow
 │   │   ├── emailService.ts       # Email notifications
 │   │   ├── fileService.ts        # Document storage
+│   │   ├── documentParser.ts     # Document text extraction
 │   │   └── evaluators/           # Evaluation strategies
 │   │       ├── evaluatorInterface.ts
 │   │       ├── ruleBasedEvaluator.ts
 │   │       ├── aiEvaluator.ts
+│   │       ├── mockAIResponses.ts
 │   │       └── evaluatorFactory.ts
 │   ├── types/               # TypeScript type definitions
 │   │   ├── express.d.ts     # Express type extensions
@@ -477,6 +532,11 @@ Includes HTML email template and error handling.
 - Verify API key is valid at [OpenAI Platform](https://platform.openai.com/)
 - Check OpenAI account has available credits
 - Ensure `EVALUATOR_TYPE=ai` in `.env`
+- Try enabling mock mode for testing: `USE_MOCK_AI=true`
+
+#### Document Parsing or AI Issues
+
+For detailed troubleshooting of AI evaluation, document parsing, rate limits, and response issues, see the [AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md#troubleshooting).
 
 #### Email Not Sending
 
@@ -529,6 +589,7 @@ If you encounter issues not covered here:
 ## Additional Documentation
 
 - **[API Documentation](docs/API.md)**: Detailed endpoint specifications with examples
+- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Comprehensive guide for AI-powered evaluation with document parsing
 - **[Architecture Guide](docs/ARCHITECTURE.md)**: System design and data flow
 - **[Deployment Guide](docs/DEPLOYMENT.md)**: Production deployment instructions
 - **[Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)**: Traceability matrix

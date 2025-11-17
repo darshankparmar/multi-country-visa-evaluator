@@ -163,6 +163,12 @@ curl -X POST http://localhost:3000/api/evaluations \
     "evaluationId": "550e8400-e29b-41d4-a716-446655440000",
     "score": 78,
     "summary": "Your application shows strong potential for the Ireland Critical Skills Employment Permit. You have submitted 3 of 4 required documents. Consider adding police clearance certificate to strengthen your application. Your employment contract demonstrates the required skill level and salary threshold.",
+    "recommendations": [
+      "Obtain police clearance certificate to complete required documentation",
+      "Include additional reference letters from previous employers",
+      "Provide certified translations for any non-English documents"
+    ],
+    "conclusion": "This application demonstrates good approval potential. The candidate meets most requirements with solid supporting documentation. Addressing the missing police clearance certificate would strengthen the application significantly.",
     "userInfo": {
       "name": "John Doe",
       "email": "john.doe@example.com"
@@ -175,6 +181,8 @@ curl -X POST http://localhost:3000/api/evaluations \
   }
 }
 ```
+
+**Note**: The `recommendations` and `conclusion` fields are included when using AI evaluation with document parsing enabled (`EVALUATOR_TYPE=ai` and `ENABLE_DOCUMENT_PARSING=true`). For rule-based evaluation or AI without document parsing, only `score` and `summary` are returned.
 
 **Note**: The response does not include the `partnerId` field for privacy reasons, but the evaluation is internally associated with the partner if an API key was provided.
 
@@ -262,6 +270,12 @@ curl http://localhost:3000/api/evaluations/550e8400-e29b-41d4-a716-446655440000
     "results": {
       "score": 78,
       "summary": "Your application shows strong potential...",
+      "recommendations": [
+        "Consider obtaining additional reference letters",
+        "Include more recent financial statements",
+        "Provide certified translations for non-English documents"
+      ],
+      "conclusion": "This application shows good approval potential with comprehensive documentation.",
       "evaluatedAt": "2025-11-17T10:30:05.000Z"
     },
     "createdAt": "2025-11-17T10:30:00.000Z",
@@ -269,6 +283,8 @@ curl http://localhost:3000/api/evaluations/550e8400-e29b-41d4-a716-446655440000
   }
 }
 ```
+
+**Note**: Enhanced fields (`recommendations`, `conclusion`) are available when using AI evaluation with document parsing enabled.
 
 **Error Response** (404 Not Found):
 ```json
@@ -907,4 +923,13 @@ For API support and questions:
 
 ---
 
-**Last Updated**: November 17, 2025
+## Related Documentation
+
+- **[AI Evaluation Guide](AI_EVALUATION_GUIDE.md)**: Detailed guide for AI-powered evaluation features
+- **[Scoring Configuration](SCORING_CONFIGURATION.md)**: Configure weighted category scoring
+- **[Mock AI Mode](MOCK_AI_MODE.md)**: Testing without API costs
+- **[Architecture Guide](ARCHITECTURE.md)**: System design and data flow
+
+---
+
+**Last Updated**: November 2025

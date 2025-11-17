@@ -937,4 +937,12 @@ Regular review and adjustment of priorities based on feedback and market conditi
 
 ---
 
-**Last Updated**: November 17, 2025
+## Related Documentation
+
+- **[AI Evaluation Guide](AI_EVALUATION_GUIDE.md)**: Current AI evaluation implementation
+- **[Scoring Configuration](SCORING_CONFIGURATION.md)**: Weighted scoring system
+- **[Architecture Guide](ARCHITECTURE.md)**: System architecture and design
+
+---
+
+**Last Updated**: November 2025

@@ -767,66 +767,217 @@ export class RuleBasedEvaluator implements IEvaluator {
 - Transparent (rules are visible)
 - Good for testing and development
 
-#### 3. AI Evaluator
+#### 3. AI Evaluator (Enhanced)
 
 **File**: `aiEvaluator.ts`
 
-**Algorithm**:
+**Enhanced Features**:
+- **Document Content Analysis**: Extracts and analyzes text from PDF, DOCX, TXT files
+- **Weighted Category Scoring**: Evaluates across 5 configurable categories
+- **Detailed Recommendations**: Provides 3+ specific, actionable suggestions
+- **Comprehensive Conclusions**: Generates clear statements about application viability
+- **Mock Mode**: Cost-free testing with realistic responses
+- **Retry Logic**: Automatic retry with exponential backoff
+
+**Architecture**:
 ```typescript
 export class AIEvaluator implements IEvaluator {
-  private openai: OpenAI
+  private openai: OpenAI | null
+  private documentParser: DocumentParser
+  private useMockMode: boolean
   
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY
-    })
+    this.useMockMode = process.env.USE_MOCK_AI === 'true'
+    this.documentParser = new DocumentParser()
+    
+    if (!this.useMockMode) {
+      this.openai = new OpenAI({
+        apiKey: process.env.OPENAI_API_KEY
+      })
+    }
   }
   
   async evaluate(params: EvaluateParams): Promise<EvaluationResult> {
-    const prompt = this.buildPrompt(params)
+    // 1. Parse documents to extract text content
+    const parsedDocuments = await this.documentParser.parseDocuments(
+      params.documents
+    )
     
-    const response = await this.openai.chat.completions.create({
-      model: process.env.AI_MODEL || 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content: 'You are an immigration expert evaluating visa applications.'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7
-    })
+    // 2. Get scoring configuration for visa type
+    const scoringConfig = getScoringConfig(params.country, params.visaType)
     
-    return this.parseAIResponse(response)
+    // 3. Use mock mode or call OpenAI
+    if (this.useMockMode) {
+      return this.getMockEvaluation(params, scoringConfig)
+    }
+    
+    // 4. Build structured prompt with document content
+    const prompt = this.buildEnhancedPrompt(params, parsedDocuments, scoringConfig)
+    
+    // 5. Call OpenAI with retry logic
+    const aiResponse = await this.callOpenAIWithRetry(prompt)
+    
+    // 6. Parse response and calculate weighted score
+    return this.parseEnhancedResponse(aiResponse, scoringConfig)
   }
   
-  private buildPrompt(params: EvaluateParams): string {
-    return `Evaluate this visa application:
+  private buildEnhancedPrompt(
+    params: EvaluateParams,
+    parsedDocuments: ParsedDocument[],
+    config: VisaScoringConfig
+  ): string {
+    return `Evaluate this visa application with detailed analysis:
+    
     Country: ${params.country}
     Visa Type: ${params.visaType}
-    Documents: ${params.documents.map(d => d.filename).join(', ')}
+    Applicant: ${params.userInfo.name}
+    
+    Documents Submitted:
+    ${parsedDocuments.map(doc => `
+      - ${doc.originalName} (${doc.documentType})
+      ${doc.success ? `Content: ${doc.extractedText.substring(0, 500)}...` : 'Failed to parse'}
+    `).join('\n')}
+    
+    Evaluate across these categories (provide score 0-100 for each):
+    ${config.categories.map(cat => `
+      - ${cat.name} (${cat.weight}%): ${cat.description}
+    `).join('\n')}
     
     Provide:
-    1. A score from 0-100
-    2. A brief summary with recommendations
+    1. Score for each category (0-100)
+    2. Brief reasoning for each category score
+    3. Overall summary (2-3 sentences)
+    4. 3-5 specific, actionable recommendations
+    5. Clear conclusion about application viability
     
-    Format: SCORE: [number] SUMMARY: [text]`
+    Format as JSON:
+    {
+      "categoryScores": [
+        {"category": "name", "score": 0-100, "reasoning": "..."}
+      ],
+      "summary": "...",
+      "recommendations": ["...", "..."],
+      "conclusion": "..."
+    }`
   }
   
-  private parseAIResponse(response: any): EvaluationResult {
-    // Parse AI response to extract score and summary
+  private async callOpenAIWithRetry(prompt: string): Promise<any> {
+    const maxRetries = parseInt(process.env.AI_RETRY_ATTEMPTS || '2')
+    let lastError: Error
+    
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const response = await this.openai!.chat.completions.create({
+          model: process.env.AI_MODEL || 'gpt-4',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are an expert immigration consultant evaluating visa applications.'
+            },
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          temperature: parseFloat(process.env.AI_TEMPERATURE || '0.7'),
+          max_tokens: parseInt(process.env.AI_MAX_TOKENS || '2000')
+        })
+        
+        return response
+      } catch (error) {
+        lastError = error as Error
+        if (attempt < maxRetries) {
+          const delay = Math.pow(2, attempt) * 1000 // Exponential backoff
+          await new Promise(resolve => setTimeout(resolve, delay))
+        }
+      }
+    }
+    
+    throw lastError!
+  }
+  
+  private parseEnhancedResponse(
+    response: any,
+    config: VisaScoringConfig
+  ): EvaluationResult {
+    const content = response.choices[0].message.content
+    
+    // Try to parse as JSON first
+    try {
+      const parsed = JSON.parse(content)
+      
+      // Calculate weighted final score
+      const finalScore = this.calculateWeightedScore(
+        parsed.categoryScores,
+        config
+      )
+      
+      return {
+        score: finalScore,
+        summary: parsed.summary,
+        recommendations: parsed.recommendations,
+        conclusion: parsed.conclusion
+      }
+    } catch {
+      // Fallback to text parsing if JSON fails
+      return this.parseTextResponse(content)
+    }
+  }
+  
+  private calculateWeightedScore(
+    categoryScores: Array<{category: string, score: number}>,
+    config: VisaScoringConfig
+  ): number {
+    let weightedSum = 0
+    
+    for (const categoryScore of categoryScores) {
+      const categoryConfig = config.categories.find(
+        c => c.name === categoryScore.category
+      )
+      
+      if (categoryConfig) {
+        weightedSum += (categoryScore.score * categoryConfig.weight) / 100
+      }
+    }
+    
+    return Math.round(weightedSum)
   }
 }
 ```
 
+**Key Components**:
+
+1. **DocumentParser** (`src/services/documentParser.ts`)
+   - Extracts text from PDF (pdf-parse)
+   - Extracts text from DOCX (mammoth)
+   - Reads TXT files directly
+   - Handles parsing errors gracefully
+   - Parallel processing for multiple documents
+
+2. **Scoring Configuration** (`src/config/scoringCategories.ts`)
+   - Default 5-category configuration
+   - Visa-specific configurations (e.g., US O-1A)
+   - Weight validation (must sum to 100%)
+   - Extensible for new visa types
+
+3. **Mock Responses** (`src/services/evaluators/mockAIResponses.ts`)
+   - Predefined realistic responses
+   - Visa-specific mock data
+   - Same structure as real AI responses
+   - Zero cost for testing
+
 **Characteristics**:
-- Intelligent (considers context and nuance)
-- Slower (external API call)
-- Requires API key and credits
-- Better quality evaluations
+- Intelligent (analyzes actual document content)
+- Comprehensive (weighted scoring across categories)
+- Actionable (specific recommendations)
+- Reliable (retry logic, fallback handling)
+- Testable (mock mode for development)
+- Configurable (visa-specific scoring weights)
+
+**For detailed information**, see:
+- [AI Evaluation Guide](AI_EVALUATION_GUIDE.md)
+- [Scoring Configuration](SCORING_CONFIGURATION.md)
+- [Mock AI Mode](MOCK_AI_MODE.md)
 
 #### 4. Evaluator Factory
 
@@ -1675,4 +1826,14 @@ The architecture is designed to evolve from a monolithic application to a distri
 
 ---
 
-**Last Updated**: November 17, 2025
+## Related Documentation
+
+- **[AI Evaluation Guide](AI_EVALUATION_GUIDE.md)**: Comprehensive guide for AI evaluation features
+- **[Scoring Configuration](SCORING_CONFIGURATION.md)**: Configure weighted category scoring
+- **[Mock AI Mode](MOCK_AI_MODE.md)**: Testing without API costs
+- **[API Documentation](API.md)**: Complete API reference
+- **[Deployment Guide](DEPLOYMENT.md)**: Production deployment instructions
+
+---
+
+**Last Updated**: November 2025

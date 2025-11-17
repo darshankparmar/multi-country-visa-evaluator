@@ -941,4 +941,4 @@ Before going live:
 
 ---
 
-**Last Updated**: November 17, 2025
+**Last Updated**: November 2025
