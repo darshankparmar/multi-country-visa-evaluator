@@ -64,6 +64,10 @@ const evaluationSchema = new Schema<IEvaluation>(
         uploadedAt: {
           type: Date,
           default: Date.now
+        },
+        extractedText: {
+          type: String,
+          required: false
         }
       }
     ],
@@ -78,6 +82,14 @@ const evaluationSchema = new Schema<IEvaluation>(
       },
       evaluatedAt: {
         type: Date
+      },
+      recommendations: {
+        type: [String],
+        required: false
+      },
+      conclusion: {
+        type: String,
+        required: false
       }
     },
     partnerId: {

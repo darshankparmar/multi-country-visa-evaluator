@@ -8,6 +8,7 @@ export interface IDocumentUpload {
   originalName: string;
   path: string;
   uploadedAt: Date;
+  extractedText?: string;
 }
 
 /**
@@ -17,6 +18,8 @@ export interface IEvaluationResults {
   score: number;
   summary: string;
   evaluatedAt: Date;
+  recommendations?: string[];
+  conclusion?: string;
 }
 
 /**
@@ -73,6 +76,8 @@ export interface EvaluationResponse {
     score: number;
     summary: string;
     evaluatedAt: Date;
+    recommendations?: string[];
+    conclusion?: string;
   };
   partnerId?: string;
   createdAt: Date;
