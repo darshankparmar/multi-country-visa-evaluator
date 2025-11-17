@@ -28,6 +28,15 @@ const envSchema = z.object({
   OPENAI_API_KEY: z.string().optional(),
   AI_MODEL: z.string().default('gpt-4'),
 
+  // AI Evaluation Configuration
+  ENABLE_DOCUMENT_PARSING: z.string().default('true').transform(val => val === 'true'),
+  MAX_DOCUMENT_TEXT_LENGTH: z.string().default('10000').transform(Number),
+  PARSING_TIMEOUT: z.string().default('30000').transform(Number),
+  AI_TEMPERATURE: z.string().default('0.7').transform(Number),
+  AI_MAX_TOKENS: z.string().default('2000').transform(Number),
+  AI_RETRY_ATTEMPTS: z.string().default('2').transform(Number),
+  USE_MOCK_AI: z.string().default('false').transform(val => val === 'true'),
+
   // Email Configuration
   SMTP_ENABLED: z.string().default('false').transform(val => val === 'true'),
   SMTP_HOST: z.string().optional(),
