@@ -22,9 +22,9 @@ export const LazyImage: React.FC<LazyImageProps> = React.memo(({
   useEffect(() => {
     // Check if IntersectionObserver is supported
     if (!('IntersectionObserver' in window)) {
-      // Fallback: load image immediately
-      setImageSrc(src)
-      return
+      // Fallback: load image immediately (using setTimeout to avoid setState in effect)
+      const timer = setTimeout(() => setImageSrc(src), 0)
+      return () => clearTimeout(timer)
     }
 
     const observer = new IntersectionObserver(
@@ -41,13 +41,14 @@ export const LazyImage: React.FC<LazyImageProps> = React.memo(({
       { threshold }
     )
 
-    if (imgRef.current) {
-      observer.observe(imgRef.current)
+    const currentImg = imgRef.current
+    if (currentImg) {
+      observer.observe(currentImg)
     }
 
     return () => {
-      if (imgRef.current) {
-        observer.unobserve(imgRef.current)
+      if (currentImg) {
+        observer.unobserve(currentImg)
       }
     }
   }, [src, threshold])

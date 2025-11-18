@@ -12,13 +12,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000
  */
 interface ApiClient {
   /** GET request */
-  get<T>(url: string, config?: any): Promise<T>
+  get<T>(url: string, config?: Record<string, unknown>): Promise<T>
   /** POST request */
-  post<T>(url: string, data?: any, config?: any): Promise<T>
+  post<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T>
   /** PUT request */
-  put<T>(url: string, data?: any, config?: any): Promise<T>
+  put<T>(url: string, data?: unknown, config?: Record<string, unknown>): Promise<T>
   /** DELETE request */
-  delete<T>(url: string, config?: any): Promise<T>
+  delete<T>(url: string, config?: Record<string, unknown>): Promise<T>
 }
 
 const axiosInstance: AxiosInstance = axios.create({
@@ -63,7 +63,7 @@ const getErrorMessage = (error: AxiosError): string => {
 
   // HTTP status code errors
   const status = error.response.status
-  const data = error.response.data as any
+  const data = error.response.data as { message?: string }
 
   switch (status) {
     case 400:

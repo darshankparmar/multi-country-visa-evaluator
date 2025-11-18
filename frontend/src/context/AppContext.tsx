@@ -1,15 +1,6 @@
-import React, { createContext, useContext, useState } from 'react'
+import React, { useState } from 'react'
 import type { ReactNode } from 'react'
-
-interface AppContextType {
-  loading: boolean
-  error: string | null
-  setLoading: (loading: boolean) => void
-  setError: (error: string | null) => void
-  clearError: () => void
-}
-
-const AppContext = createContext<AppContextType | undefined>(undefined)
+import { AppContext } from './appContextDefinition'
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [loading, setLoading] = useState(false)
@@ -30,12 +21,4 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       {children}
     </AppContext.Provider>
   )
-}
-
-export const useAppContext = () => {
-  const context = useContext(AppContext)
-  if (!context) {
-    throw new Error('useAppContext must be used within AppProvider')
-  }
-  return context
 }

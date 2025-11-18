@@ -25,7 +25,7 @@ export const EvaluationFilters: React.FC<EvaluationFiltersProps> = ({
 }) => {
   const [filters, setFilters] = useState<FilterState>({})
 
-  const handleChange = (key: keyof FilterState, value: any) => {
+  const handleChange = (key: keyof FilterState, value: string | number | undefined) => {
     const newFilters = { ...filters, [key]: value || undefined }
     setFilters(newFilters)
     onFilterChange(newFilters)

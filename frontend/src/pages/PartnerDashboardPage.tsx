@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../components/common/Button'
 import { Input } from '../components/common/Input'
 import { LoadingSpinner } from '../components/common/LoadingSpinner'
@@ -58,11 +59,12 @@ const ApiKeyLogin: React.FC<ApiKeyLoginProps> = ({ onLogin }) => {
         sessionStorage.setItem('partner-api-key', apiKey)
         onLogin(apiKey)
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('API key validation error:', err)
-      if (err.response?.status === 401) {
+      const error = err as { response?: { status?: number } }
+      if (error.response?.status === 401) {
         setError('Invalid API key. Please check your credentials.')
-      } else if (err.response?.status === 429) {
+      } else if (error.response?.status === 429) {
         setError('Rate limit exceeded. Please try again later.')
       } else {
         setError('Failed to validate API key. Please try again.')
@@ -213,9 +215,10 @@ const PartnerDashboardPage: React.FC = () => {
           avgScore: Math.round(avgScore * 10) / 10,
           thisMonth
         })
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch evaluations:', err)
-        if (err.response?.status === 401) {
+        const error = err as { response?: { status?: number } }
+        if (error.response?.status === 401) {
           setError('Session expired. Please login again.')
           handleLogout()
         } else {
@@ -299,7 +302,7 @@ const PartnerDashboardPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-8">
           <div>
@@ -320,15 +323,15 @@ const PartnerDashboardPage: React.FC = () => {
 
         {/* API Guide Link */}
         <div className="mb-8">
-          <a
-            href="/partner-api-guide"
+          <Link
+            to="/partner-api-guide"
             className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
           >
             <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
             </svg>
             View Partner API Guide & Documentation
-          </a>
+          </Link>
         </div>
 
         {/* Error Message */}

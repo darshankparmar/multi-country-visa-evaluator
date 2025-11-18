@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import React, { useEffect } from 'react'
+import { useForm, Controller, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { visaSelectionSchema } from '../../utils/validation'
-import { useEvaluationContext } from '../../context/EvaluationContext'
+import { useEvaluationContext } from '../../context/useEvaluationContext'
 import { useVisaTypes } from '../../hooks/useVisaTypes'
 import { Select } from '../common/Select'
 import { Button } from '../common/Button'
@@ -19,22 +19,13 @@ interface VisaSelectionStepProps {
 
 export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, onBack }) => {
   const { formData, updateFormData } = useEvaluationContext()
-  const [selectedCountry, setSelectedCountry] = useState(formData.country)
 
   // Fetch countries initially
   const { countries, loading: countriesLoading, error: countriesError } = useVisaTypes()
 
-  // Fetch visa types when country is selected
-  const {
-    visaTypes,
-    loading: visaTypesLoading,
-    error: visaTypesError
-  } = useVisaTypes(selectedCountry)
-
   const {
     control,
     handleSubmit,
-    watch,
     setValue,
     formState: { errors, isValid }
   } = useForm<VisaSelectionFormData>({
@@ -46,17 +37,20 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
     }
   })
 
-  const watchCountry = watch('country')
-  const watchVisaType = watch('visaType')
+  const watchCountry = useWatch({ control, name: 'country' })
+  const watchVisaType = useWatch({ control, name: 'visaType' })
 
-  // Update selected country when form country changes
+  // Fetch visa types when country is selected
+  const {
+    visaTypes,
+    loading: visaTypesLoading,
+    error: visaTypesError
+  } = useVisaTypes(watchCountry)
+
+  // Reset visa type when country changes
   useEffect(() => {
-    if (watchCountry && watchCountry !== selectedCountry) {
-      setSelectedCountry(watchCountry)
-      // Reset visa type when country changes
-      setValue('visaType', '')
-    }
-  }, [watchCountry, selectedCountry, setValue])
+    setValue('visaType', '')
+  }, [watchCountry, setValue])
 
   const onSubmit = (data: VisaSelectionFormData) => {
     updateFormData(data)
@@ -101,7 +95,7 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
         </div>
 
         {/* Visa Type Selector */}
-        {selectedCountry && (
+        {watchCountry && (
           <div>
             <label htmlFor="visaType" className="block text-sm font-medium text-gray-700 mb-1">
               Visa Type

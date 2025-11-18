@@ -6,12 +6,12 @@
  * Report Web Vitals metrics
  * Note: Requires 'web-vitals' package to be installed
  */
-export const reportWebVitals = (onPerfEntry?: (metric: any) => void) => {
+export const reportWebVitals = (onPerfEntry?: (metric: unknown) => void) => {
   if (onPerfEntry && onPerfEntry instanceof Function) {
     // Dynamic import - will only work if web-vitals is installed
     // This is optional and won't break the build if not available
     try {
-      // @ts-ignore - optional dependency
+      // @ts-expect-error - optional dependency
       import('web-vitals').then(({ getCLS, getFID, getFCP, getLCP, getTTFB }) => {
         getCLS(onPerfEntry)
         getFID(onPerfEntry)
@@ -61,7 +61,7 @@ export const measureRender = (componentName: string, callback: () => void) => {
 /**
  * Debounce function for performance optimization
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
@@ -76,7 +76,7 @@ export const debounce = <T extends (...args: any[]) => any>(
 /**
  * Throttle function for performance optimization
  */
-export const throttle = <T extends (...args: any[]) => any>(
+export const throttle = <T extends (...args: unknown[]) => unknown>(
   func: T,
   limit: number
 ): ((...args: Parameters<T>) => void) => {

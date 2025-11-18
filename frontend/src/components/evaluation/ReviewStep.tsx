@@ -1,5 +1,5 @@
 import React from 'react'
-import { useEvaluationContext } from '../../context/EvaluationContext'
+import { useEvaluationContext } from '../../context/useEvaluationContext'
 import { Button } from '../common/Button'
 import {
   UserIcon,
@@ -115,7 +115,7 @@ export const ReviewStep: React.FC<ReviewStepProps> = ({ onBack, onSubmit, onEdit
           </div>
           {formData.documents.length > 0 ? (
             <ul className="space-y-2">
-              {formData.documents.map((file, index) => (
+              {formData.documents.map((file: File, index: number) => (
                 <li key={index} className="flex items-center bg-white rounded p-3 border border-gray-200">
                   <DocumentIcon className="w-5 h-5 text-primary-600 mr-2 sm:mr-3 flex-shrink-0" />
                   <div className="flex-1 min-w-0">

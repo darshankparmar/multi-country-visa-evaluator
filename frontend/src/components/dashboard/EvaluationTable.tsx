@@ -10,6 +10,26 @@ interface EvaluationTableProps {
 type SortField = 'date' | 'score' | 'name'
 type SortDirection = 'asc' | 'desc'
 
+// SortIcon component moved outside to avoid recreation on each render
+const SortIcon: React.FC<{ field: SortField; sortField: SortField; sortDirection: SortDirection }> = ({ field, sortField, sortDirection }) => {
+  if (sortField !== field) {
+    return (
+      <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
+      </svg>
+    )
+  }
+  return sortDirection === 'asc' ? (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+    </svg>
+  ) : (
+    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
 export const EvaluationTable: React.FC<EvaluationTableProps> = ({ evaluations, onExport }) => {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
@@ -68,25 +88,6 @@ export const EvaluationTable: React.FC<EvaluationTableProps> = ({ evaluations, o
     })
   }
 
-  const SortIcon: React.FC<{ field: SortField }> = ({ field }) => {
-    if (sortField !== field) {
-      return (
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      )
-    }
-    return sortDirection === 'asc' ? (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
-    ) : (
-      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
-    )
-  }
-
   if (evaluations.length === 0) {
     return (
       <div className="bg-white rounded-lg shadow-md p-8 text-center">
@@ -122,7 +123,7 @@ export const EvaluationTable: React.FC<EvaluationTableProps> = ({ evaluations, o
               >
                 <div className="flex items-center space-x-1">
                   <span>Name</span>
-                  <SortIcon field="name" />
+                  <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -140,7 +141,7 @@ export const EvaluationTable: React.FC<EvaluationTableProps> = ({ evaluations, o
               >
                 <div className="flex items-center space-x-1">
                   <span>Score</span>
-                  <SortIcon field="score" />
+                  <SortIcon field="score" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
               <th
@@ -149,7 +150,7 @@ export const EvaluationTable: React.FC<EvaluationTableProps> = ({ evaluations, o
               >
                 <div className="flex items-center space-x-1">
                   <span>Date</span>
-                  <SortIcon field="date" />
+                  <SortIcon field="date" sortField={sortField} sortDirection={sortDirection} />
                 </div>
               </th>
             </tr>

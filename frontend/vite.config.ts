@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'path'
 import { visualizer } from 'rollup-plugin-visualizer'
@@ -13,7 +13,7 @@ export default defineConfig({
       open: false,
       gzipSize: true,
       brotliSize: true,
-    }) as any,
+    }) as unknown as Plugin,
   ],
   resolve: {
     alias: {

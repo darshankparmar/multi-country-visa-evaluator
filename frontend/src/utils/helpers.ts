@@ -10,7 +10,7 @@ import { FILE_UPLOAD, SCORE_THRESHOLDS, SCORE_LABELS } from './constants'
  * @returns True if file type is allowed
  */
 export const isValidFileType = (file: File): boolean => {
-  return FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as any)
+  return FILE_UPLOAD.ALLOWED_TYPES.includes(file.type as typeof FILE_UPLOAD.ALLOWED_TYPES[number])
 }
 
 /**
@@ -71,7 +71,7 @@ export const isValidUUID = (id: string): boolean => {
  * @param wait - Wait time in milliseconds
  * @returns Debounced function
  */
-export const debounce = <T extends (...args: any[]) => any>(
+export const debounce = <T extends (...args: unknown[]) => unknown>(
   func: T,
   wait: number
 ): ((...args: Parameters<T>) => void) => {
