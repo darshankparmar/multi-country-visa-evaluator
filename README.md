@@ -4,6 +4,17 @@
 
 A lightweight full-stack system that collects visa applicant data, validates required documents, generates a transparent 0–100 eligibility score with explanations, stores results, and provides optional partner API access for multi-country visa evaluation.
 
+## ✨ Key Features
+
+- 🌍 **Multi-Country Support**: 6 countries, 13 visa types (Ireland, Poland, France, Netherlands, Germany, USA)
+- 🤖 **AI-Powered Evaluation**: OpenAI GPT-4 integration with document content analysis
+- 📊 **Partner Dashboard**: Full-featured analytics dashboard with charts, filters, and CSV export
+- 🔐 **Secure API**: API key authentication with rate limiting
+- 📧 **Email Notifications**: Automated result delivery with HTML templates
+- 📄 **Document Parsing**: Extract and analyze text from PDF, DOCX, and TXT files
+- 🎯 **Weighted Scoring**: 5-category evaluation system with configurable weights
+- 🚀 **Production-Ready**: Comprehensive error handling, logging, and monitoring
+
 ## 🚀 Quick Start
 
 - **Backend**: See [README.md](backend/README.md)
@@ -36,25 +47,42 @@ A lightweight full-stack system that collects visa applicant data, validates req
 
 ## 📚 Documentation
 
-- [Backend Documentation](backend/README.md)
-- [Frontend Documentation](frontend/README.md)
-- [API Documentation](backend/docs/API.md)
-- [CI/CD Pipeline](.github/CI_CD.md)
-- [Architecture Guide](backend/docs/ARCHITECTURE.md)
+### Getting Started
+- [Backend Setup & API Guide](backend/README.md) - Complete backend documentation
+- [Frontend Setup Guide](frontend/README.md) - Frontend installation and development
+
+### Technical Documentation
+- [API Documentation](backend/docs/API.md) - REST API endpoints with examples
+- [Architecture Guide](backend/docs/ARCHITECTURE.md) - System design and data flow
+- [AI Evaluation Guide](backend/docs/AI_EVALUATION_GUIDE.md) - AI features and configuration
+- [Partner API Key Guide](backend/docs/PARTNER_API_KEY_GUIDE.md) - Partner onboarding
+- [Deployment Guide](backend/docs/DEPLOYMENT.md) - Production deployment
+- [Future Enhancements](backend/docs/FUTURE_ENHANCEMENTS.md) - Roadmap and planned features
+- [CI/CD Pipeline](.github/CI_CD.md) - Automated workflows
 
 ## 🔧 Development
 
-### Backend
+### Prerequisites
+- Node.js 18+
+- MongoDB 6+
+- OpenAI API Key (for AI evaluation)
+
+### Backend Setup
 ```bash
 cd backend
 npm install
+cp .env.example .env
+# Edit .env with your configuration
+npm run seed  # Seed database with visa types
 npm run dev
 ```
 
-### Frontend
+### Frontend Setup
 ```bash
 cd frontend
 npm install
+cp .env.example .env
+# Edit .env with API URL
 npm run dev
 ```
 
