@@ -196,6 +196,21 @@ Configure the following environment variables in your `.env` file:
 |----------|-------------|---------|----------|
 | `LOG_LEVEL` | Winston log level (`error`, `warn`, `info`, `debug`) | `info` | No |
 
+### Rate Limiting Configuration
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `RATE_LIMIT_GENERAL_MAX` | Maximum general API requests per window per IP | `100` | No |
+| `RATE_LIMIT_GENERAL_WINDOW_MS` | Time window for general API rate limit (milliseconds) | `900000` (15 min) | No |
+| `RATE_LIMIT_EVALUATION_MAX` | Maximum evaluation submissions per window per IP | `10` | No |
+| `RATE_LIMIT_EVALUATION_WINDOW_MS` | Time window for evaluation rate limit (milliseconds) | `3600000` (1 hour) | No |
+| `RATE_LIMIT_PARTNER_MAX` | Maximum partner API requests per window per API key | `1000` | No |
+| `RATE_LIMIT_PARTNER_WINDOW_MS` | Time window for partner API rate limit (milliseconds) | `3600000` (1 hour) | No |
+| `RATE_LIMIT_PARTNER_EVAL_MAX` | Maximum partner evaluation submissions per window per API key | `50` | No |
+| `RATE_LIMIT_PARTNER_EVAL_WINDOW_MS` | Time window for partner evaluation rate limit (milliseconds) | `3600000` (1 hour) | No |
+
+**Note**: Rate limiting protects the API from abuse and ensures fair usage. The system uses a sliding window algorithm with in-memory storage. Health check endpoints are automatically excluded from rate limiting.
+
 ## AI Evaluation Enhancement
 
 The system supports AI-powered evaluation with document content analysis and weighted category scoring.
@@ -234,6 +249,80 @@ For detailed information, see:
 - **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Complete guide with examples and troubleshooting
 - **[Scoring Configuration](docs/SCORING_CONFIGURATION.md)**: How to configure category weights
 - **[Mock AI Mode](docs/MOCK_AI_MODE.md)**: Testing without API costs
+
+## Rate Limiting
+
+The API implements comprehensive rate limiting to protect against abuse and ensure fair usage across all users and partners.
+
+### Rate Limit Tiers
+
+The system enforces different rate limits based on endpoint type and authentication:
+
+| Endpoint Type | Limit | Window | Identifier |
+|--------------|-------|--------|------------|
+| General API (unauthenticated) | 100 requests | 15 minutes | IP address |
+| Evaluation submissions (unauthenticated) | 10 submissions | 1 hour | IP address |
+| Partner API (authenticated) | 1000 requests | 1 hour | API key |
+| Partner evaluations (authenticated) | 50 submissions | 1 hour | API key |
+
+### Rate Limit Headers
+
+Every API response includes rate limit information in the headers:
+
+```http
+X-RateLimit-Limit: 100
+X-RateLimit-Remaining: 95
+X-RateLimit-Reset: 2025-11-18T15:30:00.000Z
+```
+
+- **X-RateLimit-Limit**: Maximum requests allowed in the current window
+- **X-RateLimit-Remaining**: Number of requests remaining in the current window
+- **X-RateLimit-Reset**: ISO 8601 timestamp when the rate limit window resets
+
+### Rate Limit Exceeded Response
+
+When a rate limit is exceeded, the API returns a 429 status code:
+
+```json
+{
+  "status": "error",
+  "message": "Too many requests, please try again later",
+  "retryAfter": 3600
+}
+```
+
+The response also includes a `Retry-After` header indicating seconds until the limit resets.
+
+### Implementation Details
+
+- **Algorithm**: Sliding window for accurate rate limiting
+- **Storage**: In-memory with automatic cleanup of expired entries
+- **Exclusions**: Health check endpoints (`/health`) are excluded from rate limiting
+- **Logging**: Rate limit violations are logged with client identifier and endpoint
+
+### Configuration
+
+Rate limits can be adjusted via environment variables (see Rate Limiting Configuration section above). The system validates configuration on startup and logs the active rate limit settings.
+
+### Troubleshooting Rate Limits
+
+**Problem**: Receiving 429 Too Many Requests errors
+
+**Solutions**:
+1. Check the `X-RateLimit-Reset` header to see when your limit resets
+2. Monitor the `X-RateLimit-Remaining` header to track your usage
+3. For partners: Ensure you're using your API key for higher limits
+4. Implement exponential backoff in your client application
+5. Contact support if you need higher rate limits for your use case
+
+**Problem**: Rate limits reset unexpectedly
+
+**Cause**: The in-memory rate limit store resets when the application restarts.
+
+**Solutions**:
+1. This is expected behavior for the current implementation
+2. For production deployments requiring persistent rate limits, consider migrating to Redis-based storage
+3. Monitor application uptime to understand rate limit behavior
 
 ## Development
 
@@ -407,7 +496,7 @@ docker run -p 3000:3000 --env-file .env visa-api
 - [ ] Set up MongoDB backups
 - [ ] Configure log rotation
 - [ ] Set up monitoring (health check endpoint available at `/health`)
-- [ ] Implement rate limiting (future enhancement)
+- [ ] Configure rate limiting thresholds for production traffic
 - [ ] Review and secure all environment variables
 - [ ] Test email notifications
 - [ ] Verify file upload limits and storage
@@ -434,6 +523,8 @@ http://localhost:3000/api
 | `/api/partners` | GET | Admin | List partners |
 | `/api/partners/:id/status` | PATCH | Admin | Update partner status |
 | `/health` | GET | No | Health check |
+
+**Note**: For detailed partner API documentation, see the Partner API Guide page in the frontend application at `/partner-api-guide`.
 
 For detailed API documentation with request/response examples, see [docs/API.md](docs/API.md).
 

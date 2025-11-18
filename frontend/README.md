@@ -10,6 +10,8 @@ A modern, responsive React application for evaluating visa application eligibili
 - **Real-time Validation**: Instant feedback on form inputs using Zod schemas
 - **Instant Results**: Immediate evaluation scores and recommendations
 - **Results Search**: Retrieve previous evaluations by ID
+- **Partner API Guide**: Comprehensive documentation page for API integration partners
+- **Partner Dashboard**: Analytics dashboard for partners to view evaluations and usage statistics
 - **Responsive Design**: Optimized for desktop, tablet, and mobile devices (320px - 1920px)
 - **Accessible UI**: WCAG-compliant components with keyboard navigation
 - **Performance Optimized**: Code splitting, lazy loading, and bundle optimization
@@ -112,6 +114,13 @@ Create a `.env` file in the frontend directory with the following variables:
 | `VITE_DEV_MODE` | Development mode flag | `true` | No |
 
 **Note**: All environment variables must be prefixed with `VITE_` to be accessible in the application.
+
+### Partner Features
+
+The application includes two partner-focused pages:
+
+1. **Partner API Guide** (`/partner-api-guide`): Comprehensive API documentation with authentication, endpoints, rate limits, and code examples
+2. **Partner Dashboard** (`/partner-dashboard`): Analytics dashboard showing evaluation statistics, usage metrics, and API key management
 
 ## 📦 Building for Production
 
@@ -230,6 +239,8 @@ frontend/
 │   │   ├── EvaluationPage.tsx
 │   │   ├── ResultsPage.tsx
 │   │   ├── SearchPage.tsx
+│   │   ├── PartnerApiGuidePage.tsx
+│   │   ├── PartnerDashboardPage.tsx
 │   │   └── NotFoundPage.tsx
 │   ├── types/          # TypeScript type definitions
 │   ├── utils/          # Utility functions
