@@ -2,6 +2,12 @@
 
 A modern, responsive React application for evaluating visa application eligibility across multiple countries. Built with React 19, TypeScript, Vite, and Tailwind CSS.
 
+## 🌐 Live Demo
+
+**Application**: https://multi-country-visa-evaluator.vercel.app
+
+Experience the live application with all features enabled.
+
 ## 🌟 Features
 
 - **Multi-Step Form**: Intuitive 4-step evaluation process with progress tracking

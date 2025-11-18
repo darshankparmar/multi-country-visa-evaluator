@@ -2,7 +2,18 @@
 
 ![Code Quality](https://github.com/darshankparmar/multi-country-visa-evaluator/actions/workflows/code-quality.yml/badge.svg)
 
-A lightweight full-stack system that collects visa applicant data, validates required documents, generates a transparent 0–100 eligibility score with explanations, stores results, and provides optional partner API access for multi-country visa evaluation.
+A production-ready full-stack system that collects visa applicant data, validates required documents, generates AI-powered or rule-based eligibility scores (0–100) with detailed explanations, stores results in MongoDB, and provides comprehensive partner API access with analytics dashboard for multi-country visa evaluation.
+
+## 🌐 Live Demo
+
+**Application**: https://multi-country-visa-evaluator.vercel.app
+
+Try the live application to:
+- ✅ Submit visa evaluations for 6 countries
+- ✅ View instant AI-powered results with recommendations
+- ✅ Search previous evaluations by ID
+- ✅ Explore partner API documentation
+- ✅ Access partner dashboard (requires API key)
 
 ## ✨ Key Features
 
@@ -17,6 +28,10 @@ A lightweight full-stack system that collects visa applicant data, validates req
 
 ## 🚀 Quick Start
 
+### Try Live Demo
+Visit **https://multi-country-visa-evaluator.vercel.app** to try the application immediately.
+
+### Local Development
 - **Backend**: See [README.md](backend/README.md)
 - **Frontend**: See [README.md](frontend/README.md)
 - **CI/CD**: See [CI_CD.md](.github/CI_CD.md)
