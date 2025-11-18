@@ -84,7 +84,7 @@ export class EmailService {
       return;
     }
 
-    const { email, name, score, summary, evaluationId } = params;
+    const { email, name, score, summary, evaluationId, recommendations, conclusion } = params;
 
     try {
       const config = getConfig();
@@ -94,8 +94,8 @@ export class EmailService {
         from: fromAddress,
         to: email,
         subject: 'Your Visa Evaluation Results',
-        html: this.generateEmailTemplate({ name, score, summary, evaluationId }),
-        text: this.generatePlainTextEmail({ name, score, summary, evaluationId })
+        html: this.generateEmailTemplate({ name, score, summary, evaluationId, recommendations, conclusion }),
+        text: this.generatePlainTextEmail({ name, score, summary, evaluationId, recommendations, conclusion })
       };
 
       const info = await this.transporter.sendMail(mailOptions);
