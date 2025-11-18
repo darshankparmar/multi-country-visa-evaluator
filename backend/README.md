@@ -691,10 +691,6 @@ If you encounter issues not covered here:
 - **[Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)**: Traceability matrix
 - **[Future Enhancements](docs/FUTURE_ENHANCEMENTS.md)**: Planned features and improvements
 
-## License
-
-ISC
-
 ---
 
 **Version**: 1.0.0  

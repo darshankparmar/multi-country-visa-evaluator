@@ -8,7 +8,7 @@ A lightweight full-stack system that collects visa applicant data, validates req
 
 - **Backend**: See [README.md](backend/README.md)
 - **Frontend**: See [README.md](frontend/README.md)
-- **CI/CD**: See [README.md](.github/README.md)
+- **CI/CD**: See [CI_CD.md](.github/CI_CD.md)
 
 ## 📋 Project Structure
 
@@ -39,7 +39,7 @@ A lightweight full-stack system that collects visa applicant data, validates req
 - [Backend Documentation](backend/README.md)
 - [Frontend Documentation](frontend/README.md)
 - [API Documentation](backend/docs/API.md)
-- [CI/CD Pipeline](.github/README.md)
+- [CI/CD Pipeline](.github/CI_CD.md)
 - [Architecture Guide](backend/docs/ARCHITECTURE.md)
 
 ## 🔧 Development
@@ -68,7 +68,3 @@ npm test
 cd frontend
 npm run lint
 ```
-
-## 📝 License
-
-ISC
