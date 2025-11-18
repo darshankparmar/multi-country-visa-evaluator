@@ -249,6 +249,72 @@ describe('Evaluation Flow Integration Tests', () => {
       expect(result.score).toBeGreaterThanOrEqual(0);
       expect(result.score).toBeLessThanOrEqual(100);
     });
+
+    it('should use visa-specific evaluation for Ireland Critical Skills', async () => {
+      const params: EvaluateParams = {
+        country: 'Ireland',
+        visaType: 'Critical Skills Employment Permit',
+        documents: [],
+        userInfo: {
+          name: 'Test Applicant',
+          email: 'test@example.com'
+        }
+      };
+
+      const result = await evaluator.evaluate(params);
+
+      // Should complete successfully with visa-specific criteria
+      expect(result).toBeDefined();
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+      expect(result.summary).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(result.conclusion).toBeDefined();
+    });
+
+    it('should use visa-specific evaluation for Germany EU Blue Card', async () => {
+      const params: EvaluateParams = {
+        country: 'Germany',
+        visaType: 'EU Blue Card',
+        documents: [],
+        userInfo: {
+          name: 'Test Applicant',
+          email: 'test@example.com'
+        }
+      };
+
+      const result = await evaluator.evaluate(params);
+
+      // Should complete successfully with visa-specific criteria
+      expect(result).toBeDefined();
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+      expect(result.summary).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(result.conclusion).toBeDefined();
+    });
+
+    it('should use visa-specific evaluation for Netherlands Knowledge Migrant', async () => {
+      const params: EvaluateParams = {
+        country: 'Netherlands',
+        visaType: 'Knowledge Migrant Permit',
+        documents: [],
+        userInfo: {
+          name: 'Test Applicant',
+          email: 'test@example.com'
+        }
+      };
+
+      const result = await evaluator.evaluate(params);
+
+      // Should complete successfully with visa-specific criteria
+      expect(result).toBeDefined();
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+      expect(result.summary).toBeDefined();
+      expect(result.recommendations).toBeDefined();
+      expect(result.conclusion).toBeDefined();
+    });
   });
 
   describe('Performance and Reliability', () => {

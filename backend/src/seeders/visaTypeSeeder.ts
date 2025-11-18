@@ -3,13 +3,15 @@ import { connectDatabase, disconnectDatabase } from '../config/database';
 import { VisaType } from '../models/VisaType';
 import { DocumentType } from '../types/visaType.types';
 import { logger } from '../config/logger';
+import { VISA_CRITERIA_CONFIGS } from '../config/visaCriteria';
 
 // Load environment variables
 dotenv.config();
 
 /**
  * Initial visa type seed data
- * Includes 6 countries with multiple visa types and their required documents
+ * Synchronized with visa criteria configurations from visaCriteria.ts
+ * Includes all visa types with their required documents, descriptions, and processing times
  */
 const visaTypeSeedData = [
   // Ireland
@@ -22,8 +24,8 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For highly skilled workers in occupations on the Critical Skills list',
-    processingTime: '8-12 weeks'
+    description: VISA_CRITERIA_CONFIGS['Ireland-Critical Skills Employment Permit'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Ireland-Critical Skills Employment Permit'].processingTime
   },
   {
     country: 'Ireland',
@@ -33,8 +35,8 @@ const visaTypeSeedData = [
       DocumentType.EMPLOYMENT_CONTRACT,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For employment in occupations not on the ineligible list',
-    processingTime: '8-12 weeks'
+    description: VISA_CRITERIA_CONFIGS['Ireland-General Employment Permit'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Ireland-General Employment Permit'].processingTime
   },
 
   // Poland
@@ -47,8 +49,8 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For foreign nationals working for Polish employers',
-    processingTime: '1-2 months'
+    description: VISA_CRITERIA_CONFIGS['Poland-Work Permit Type A'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Poland-Work Permit Type A'].processingTime
   },
   {
     country: 'Poland',
@@ -59,8 +61,8 @@ const visaTypeSeedData = [
       DocumentType.PASSPORT_COPY,
       DocumentType.REFERENCE_LETTERS
     ],
-    description: 'For delegated workers and service providers',
-    processingTime: '1-2 months'
+    description: VISA_CRITERIA_CONFIGS['Poland-Work Permit Type C'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Poland-Work Permit Type C'].processingTime
   },
 
   // France
@@ -74,20 +76,20 @@ const visaTypeSeedData = [
       DocumentType.PASSPORT_COPY,
       DocumentType.FINANCIAL_DOCUMENTS
     ],
-    description: 'For highly qualified professionals, investors, and entrepreneurs',
-    processingTime: '2-4 months'
+    description: VISA_CRITERIA_CONFIGS['France-Talent Passport'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['France-Talent Passport'].processingTime
   },
   {
     country: 'France',
-    visaType: 'Employee Work Permit',
+    visaType: 'Salarié en Mission',
     requiredDocuments: [
       DocumentType.RESUME,
       DocumentType.EMPLOYMENT_CONTRACT,
       DocumentType.PASSPORT_COPY,
-      DocumentType.EDUCATION_CERTIFICATES
+      DocumentType.REFERENCE_LETTERS
     ],
-    description: 'Standard work authorization for employees',
-    processingTime: '2-3 months'
+    description: VISA_CRITERIA_CONFIGS['France-Salarié en Mission'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['France-Salarié en Mission'].processingTime
   },
 
   // Netherlands
@@ -100,8 +102,8 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For highly skilled migrants with recognized sponsors',
-    processingTime: '2-4 weeks'
+    description: VISA_CRITERIA_CONFIGS['Netherlands-Knowledge Migrant Permit'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Netherlands-Knowledge Migrant Permit'].processingTime
   },
   {
     country: 'Netherlands',
@@ -111,8 +113,8 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For recent graduates to seek employment',
-    processingTime: '4-6 weeks'
+    description: VISA_CRITERIA_CONFIGS['Netherlands-Orientation Year Permit'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Netherlands-Orientation Year Permit'].processingTime
   },
 
   // Germany
@@ -125,21 +127,20 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For highly qualified non-EU workers with university degrees',
-    processingTime: '1-3 months'
+    description: VISA_CRITERIA_CONFIGS['Germany-EU Blue Card'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Germany-EU Blue Card'].processingTime
   },
   {
     country: 'Germany',
-    visaType: 'Skilled Worker Visa',
+    visaType: 'ICT Permit',
     requiredDocuments: [
       DocumentType.RESUME,
       DocumentType.EMPLOYMENT_CONTRACT,
-      DocumentType.EDUCATION_CERTIFICATES,
-      DocumentType.PASSPORT_COPY,
-      DocumentType.REFERENCE_LETTERS
+      DocumentType.REFERENCE_LETTERS,
+      DocumentType.PASSPORT_COPY
     ],
-    description: 'For qualified professionals with vocational training',
-    processingTime: '1-3 months'
+    description: VISA_CRITERIA_CONFIGS['Germany-ICT Permit'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['Germany-ICT Permit'].processingTime
   },
 
   // United States
@@ -153,8 +154,8 @@ const visaTypeSeedData = [
       DocumentType.PASSPORT_COPY,
       DocumentType.PERSONAL_STATEMENT
     ],
-    description: 'For individuals with extraordinary ability in sciences, education, business, or athletics',
-    processingTime: '2-3 months'
+    description: VISA_CRITERIA_CONFIGS['United States-O-1A Visa'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['United States-O-1A Visa'].processingTime
   },
   {
     country: 'United States',
@@ -165,31 +166,46 @@ const visaTypeSeedData = [
       DocumentType.EDUCATION_CERTIFICATES,
       DocumentType.PASSPORT_COPY
     ],
-    description: 'For specialty occupation workers',
-    processingTime: '3-6 months'
-  },
-  {
-    country: 'United States',
-    visaType: 'L-1 Visa',
-    requiredDocuments: [
-      DocumentType.RESUME,
-      DocumentType.EMPLOYMENT_CONTRACT,
-      DocumentType.REFERENCE_LETTERS,
-      DocumentType.PASSPORT_COPY
-    ],
-    description: 'For intracompany transferees',
-    processingTime: '2-4 months'
+    description: VISA_CRITERIA_CONFIGS['United States-H-1B Visa'].description,
+    processingTime: VISA_CRITERIA_CONFIGS['United States-H-1B Visa'].processingTime
   }
 ];
 
 /**
  * Seeds the database with initial visa type data
  * Checks for existing data to avoid duplicates
+ * Validates that all visa types in criteria config are included
  * @returns Promise that resolves when seeding is complete
  */
 export async function seedDatabase(): Promise<void> {
   try {
     logger.info('Starting visa type seeding process...');
+
+    // Validate that all visa types in criteria config are in seed data
+    const criteriaKeys = Object.keys(VISA_CRITERIA_CONFIGS);
+    const seedKeys = visaTypeSeedData.map(vt => `${vt.country}-${vt.visaType}`);
+    
+    const missingInSeed = criteriaKeys.filter(key => !seedKeys.includes(key));
+    const missingInCriteria = seedKeys.filter(key => !criteriaKeys.includes(key));
+    
+    if (missingInSeed.length > 0) {
+      logger.warn('Visa types in criteria config but not in seed data', { 
+        missingVisaTypes: missingInSeed 
+      });
+    }
+    
+    if (missingInCriteria.length > 0) {
+      logger.warn('Visa types in seed data but not in criteria config', { 
+        missingVisaTypes: missingInCriteria 
+      });
+    }
+    
+    logger.info('Visa type validation complete', {
+      totalCriteriaConfigs: criteriaKeys.length,
+      totalSeedData: seedKeys.length,
+      missingInSeed: missingInSeed.length,
+      missingInCriteria: missingInCriteria.length
+    });
 
     // Check if data already exists
     const existingCount = await VisaType.countDocuments();
@@ -204,7 +220,8 @@ export async function seedDatabase(): Promise<void> {
     
     logger.info(`Successfully seeded ${result.length} visa types`, {
       countries: [...new Set(result.map(vt => vt.country))],
-      totalVisaTypes: result.length
+      totalVisaTypes: result.length,
+      visaTypes: result.map(vt => `${vt.country}-${vt.visaType}`)
     });
 
   } catch (error) {

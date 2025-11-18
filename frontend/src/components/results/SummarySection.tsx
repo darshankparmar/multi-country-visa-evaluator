@@ -1,4 +1,5 @@
 import React from 'react'
+import ReactMarkdown from 'react-markdown'
 
 interface SummarySectionProps {
   summary: string
@@ -40,10 +41,8 @@ export const SummarySection: React.FC<SummarySectionProps> = ({
         </div>
       </div>
 
-      <div className="prose max-w-none">
-        <p className="text-sm sm:text-base text-gray-700 leading-relaxed whitespace-pre-line">
-          {summary}
-        </p>
+      <div className="prose prose-sm sm:prose-base max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-strong:text-gray-900 prose-ul:text-gray-700 prose-li:text-gray-700">
+        <ReactMarkdown>{summary}</ReactMarkdown>
       </div>
     </div>
   )

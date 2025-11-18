@@ -6,6 +6,9 @@ import { DocumentParser, ParsedDocument } from '../documentParser';
 import { getScoringConfig, VisaScoringConfig, InternalCategoryScore } from '../../config/scoringCategories';
 import { getMockResponse } from './mockAIResponses';
 import { sanitizeForLogging } from '../../utils/piiSanitizer';
+import { getVisaCriteria, VisaCriteriaConfig } from '../../config/visaCriteria';
+import { CriteriaValidator, ApplicantData, ValidationResult } from '../criteriaValidator';
+import { EnhancedPromptBuilder } from '../enhancedPromptBuilder';
 
 /**
  * AI-based evaluator implementation using OpenAI API
@@ -46,109 +49,57 @@ export class AIEvaluator implements IEvaluator {
   /**
    * Evaluate visa application using AI analysis with document parsing
    * Uses mock responses when mockMode is enabled
+   * Routes to visa-specific evaluation if criteria exists
    */
   async evaluate(params: EvaluateParams): Promise<EvaluationResult> {
     const { country, visaType, documents, userInfo } = params;
     const evaluationStartTime = Date.now();
 
     try {
-      // Get scoring configuration
-      const scoringConfig = getScoringConfig(country, visaType);
+      // Check for visa-specific criteria
+      const visaCriteria = getVisaCriteria(country, visaType);
       
-      logger.info('Starting AI evaluation', {
-        country,
-        visaType,
-        documentCount: documents.length,
-        applicantName: userInfo.name,
-        mockMode: this.mockMode,
-        scoringCategories: scoringConfig.categories.length
-      });
-      
-      // If mock mode is enabled, return mock response
-      if (this.mockMode) {
-        const result = this.getMockEvaluation(country, visaType, scoringConfig);
-        
-        // Log completion metrics for mock evaluation
-        this.logEvaluationCompletion({
+      if (visaCriteria) {
+        // Use visa-specific evaluation
+        logger.info('Visa-specific criteria found, using enhanced evaluation', {
           country,
           visaType,
-          result,
-          durationMs: Date.now() - evaluationStartTime,
-          mockMode: true,
-          documentCount: documents.length
+          documentCount: documents.length,
+          applicantName: userInfo.name,
+          mockMode: this.mockMode,
+          criteriaConfiguration: {
+            visaType: visaCriteria.visaType,
+            description: visaCriteria.description,
+            hasSalaryThresholds: !!visaCriteria.salaryThresholds && visaCriteria.salaryThresholds.length > 0,
+            salaryThresholdCount: visaCriteria.salaryThresholds?.length || 0,
+            educationLevel: visaCriteria.educationLevel,
+            experienceYears: visaCriteria.experienceYears,
+            laborMarketTestRequired: visaCriteria.laborMarketTestRequired,
+            sponsorRequired: visaCriteria.sponsorRequired,
+            hasUniqueRules: !!visaCriteria.uniqueRules && visaCriteria.uniqueRules.length > 0,
+            criteriaWeights: visaCriteria.criteriaWeights
+          }
         });
         
-        return result;
+        return await this.evaluateWithVisaCriteria(params, visaCriteria);
+      } else {
+        // Fall back to existing generic evaluation
+        logger.info('No visa-specific criteria found, falling back to generic evaluation', {
+          country,
+          visaType,
+          documentCount: documents.length,
+          applicantName: userInfo.name,
+          mockMode: this.mockMode,
+          fallbackReason: 'No matching visa criteria configuration found',
+          fallbackType: 'generic_evaluation'
+        });
+        
+        return await this.evaluateGeneric(params);
       }
-
-      // Parse document content
-      const parseStartTime = Date.now();
-      const parsedDocuments = await this.documentParser.parseDocuments(documents);
-      const parseDuration = Date.now() - parseStartTime;
-      
-      logger.info('Document parsing phase completed', {
-        durationMs: parseDuration,
-        successfulParses: parsedDocuments.filter(d => d.success).length,
-        failedParses: parsedDocuments.filter(d => !d.success).length
-      });
-      
-      // Create enhanced prompt with actual content
-      const prompt = this.createEnhancedPrompt(
-        country,
-        visaType,
-        parsedDocuments,
-        scoringConfig,
-        userInfo
-      );
-
-      // Call OpenAI API with retry logic
-      const apiStartTime = Date.now();
-      logger.info('Calling OpenAI API for enhanced visa evaluation', {
-        country,
-        visaType,
-        model: this.model,
-        documentCount: documents.length,
-        parsedDocuments: parsedDocuments.filter(d => d.success).length,
-        promptLength: prompt.length
-      });
-
-      const response = await this.callOpenAIWithRetry([
-        {
-          role: 'system',
-          content: this.getSystemPrompt()
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ]);
-      
-      const apiDuration = Date.now() - apiStartTime;
-
-      // Log OpenAI API usage and cost
-      this.logOpenAIUsage(response, apiDuration);
-
-      // Parse structured response
-      const result = this.parseEnhancedResponse(response, scoringConfig);
-
-      // Log evaluation completion metrics
-      this.logEvaluationCompletion({
-        country,
-        visaType,
-        result,
-        durationMs: Date.now() - evaluationStartTime,
-        mockMode: false,
-        documentCount: documents.length,
-        parseDurationMs: parseDuration,
-        apiDurationMs: apiDuration
-      });
-
-      return result;
-
     } catch (error) {
       const errorDuration = Date.now() - evaluationStartTime;
       
-      logger.error('Enhanced AI evaluation failed', {
+      logger.error('AI evaluation failed', {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
         country,
@@ -173,6 +124,279 @@ export class AIEvaluator implements IEvaluator {
       
       return fallbackResult;
     }
+  }
+
+  /**
+   * Generic evaluation (existing implementation)
+   * Used when no visa-specific criteria exists
+   */
+  private async evaluateGeneric(params: EvaluateParams): Promise<EvaluationResult> {
+    const { country, visaType, documents, userInfo } = params;
+    const evaluationStartTime = Date.now();
+
+    // Get scoring configuration
+    const scoringConfig = getScoringConfig(country, visaType);
+    
+    logger.info('Starting generic AI evaluation', {
+      country,
+      visaType,
+      documentCount: documents.length,
+      applicantName: userInfo.name,
+      mockMode: this.mockMode,
+      scoringCategories: scoringConfig.categories.length
+    });
+    
+    // If mock mode is enabled, return mock response
+    if (this.mockMode) {
+      const result = this.getMockEvaluation(country, visaType, scoringConfig);
+      
+      // Log completion metrics for mock evaluation
+      this.logEvaluationCompletion({
+        country,
+        visaType,
+        result,
+        durationMs: Date.now() - evaluationStartTime,
+        mockMode: true,
+        documentCount: documents.length
+      });
+      
+      return result;
+    }
+
+    // Parse document content
+    const parseStartTime = Date.now();
+    const parsedDocuments = await this.documentParser.parseDocuments(documents);
+    const parseDuration = Date.now() - parseStartTime;
+    
+    logger.info('Document parsing phase completed', {
+      durationMs: parseDuration,
+      successfulParses: parsedDocuments.filter(d => d.success).length,
+      failedParses: parsedDocuments.filter(d => !d.success).length
+    });
+    
+    // Create enhanced prompt with actual content
+    const prompt = this.createEnhancedPrompt(
+      country,
+      visaType,
+      parsedDocuments,
+      scoringConfig,
+      userInfo
+    );
+
+    // Call OpenAI API with retry logic
+    const apiStartTime = Date.now();
+    logger.info('Calling OpenAI API for generic visa evaluation', {
+      country,
+      visaType,
+      model: this.model,
+      documentCount: documents.length,
+      parsedDocuments: parsedDocuments.filter(d => d.success).length,
+      promptLength: prompt.length
+    });
+
+    const response = await this.callOpenAIWithRetry([
+      {
+        role: 'system',
+        content: this.getSystemPrompt()
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ]);
+    
+    const apiDuration = Date.now() - apiStartTime;
+
+    // Log OpenAI API usage and cost
+    this.logOpenAIUsage(response, apiDuration);
+
+    // Parse structured response
+    const result = this.parseEnhancedResponse(response, scoringConfig);
+
+    // Log evaluation completion metrics
+    this.logEvaluationCompletion({
+      country,
+      visaType,
+      result,
+      durationMs: Date.now() - evaluationStartTime,
+      mockMode: false,
+      documentCount: documents.length,
+      parseDurationMs: parseDuration,
+      apiDurationMs: apiDuration
+    });
+
+    return result;
+  }
+
+  /**
+   * Evaluate with visa-specific criteria
+   * Uses CriteriaValidator and EnhancedPromptBuilder for targeted evaluation
+   */
+  private async evaluateWithVisaCriteria(
+    params: EvaluateParams,
+    visaCriteria: VisaCriteriaConfig
+  ): Promise<EvaluationResult> {
+    const { country, visaType, documents, userInfo } = params;
+    const evaluationStartTime = Date.now();
+
+    logger.info('Starting visa-specific AI evaluation', {
+      country,
+      visaType,
+      documentCount: documents.length,
+      applicantName: userInfo.name,
+      mockMode: this.mockMode,
+      criteriaUsed: visaCriteria.visaType
+    });
+
+    // If mock mode is enabled, return mock response
+    // Note: Mock mode doesn't use visa-specific logic yet, but maintains compatibility
+    if (this.mockMode) {
+      const scoringConfig = getScoringConfig(country, visaType);
+      const result = this.getMockEvaluation(country, visaType, scoringConfig);
+      
+      logger.info('Mock evaluation completed with visa-specific context', {
+        country,
+        visaType,
+        score: result.score,
+        criteriaUsed: visaCriteria.visaType
+      });
+      
+      this.logEvaluationCompletion({
+        country,
+        visaType,
+        result,
+        durationMs: Date.now() - evaluationStartTime,
+        mockMode: true,
+        documentCount: documents.length
+      });
+      
+      return result;
+    }
+
+    // Parse documents using existing documentParser
+    const parseStartTime = Date.now();
+    const parsedDocuments = await this.documentParser.parseDocuments(documents);
+    const parseDuration = Date.now() - parseStartTime;
+    
+    logger.info('Document parsing phase completed', {
+      durationMs: parseDuration,
+      successfulParses: parsedDocuments.filter(d => d.success).length,
+      failedParses: parsedDocuments.filter(d => !d.success).length
+    });
+
+    // Extract applicant data from parsed documents
+    const applicantData = this.extractApplicantData(parsedDocuments, userInfo);
+    
+    logger.debug('Applicant data extracted', {
+      hasSalary: !!applicantData.salary,
+      hasEducation: !!applicantData.education,
+      hasExperience: applicantData.experienceYears !== undefined
+    });
+
+    // Validate criteria using CriteriaValidator
+    const validator = new CriteriaValidator();
+    const validationResults = validator.validateAllCriteria(applicantData, visaCriteria);
+    
+    // Log detailed validation results for each criterion
+    logger.info('Criteria validation completed', {
+      country,
+      visaType,
+      criteriaUsed: visaCriteria.visaType,
+      totalCriteria: validationResults.length,
+      criteriaMet: validationResults.filter(r => r.met).length,
+      criteriaFailed: validationResults.filter(r => !r.met).length,
+      validationDetails: validationResults.map(r => ({
+        criterion: r.criterion,
+        met: r.met,
+        score: r.score,
+        maxScore: r.maxScore,
+        percentage: ((r.score / r.maxScore) * 100).toFixed(1) + '%',
+        details: r.details,
+        hasRecommendation: !!r.recommendation
+      }))
+    });
+
+    // Build visa-specific prompt using EnhancedPromptBuilder
+    const promptBuilder = new EnhancedPromptBuilder();
+    const prompt = promptBuilder.buildVisaSpecificPrompt(
+      country,
+      visaType,
+      visaCriteria,
+      parsedDocuments,
+      userInfo
+    );
+
+    // Call OpenAI with enhanced prompt
+    const apiStartTime = Date.now();
+    logger.info('Calling OpenAI API with visa-specific prompt', {
+      country,
+      visaType,
+      model: this.model,
+      promptLength: prompt.length,
+      criteriaUsed: visaCriteria.visaType
+    });
+
+    const response = await this.callOpenAIWithRetry([
+      {
+        role: 'system',
+        content: this.getVisaSpecificSystemPrompt(visaCriteria)
+      },
+      {
+        role: 'user',
+        content: prompt
+      }
+    ]);
+    
+    const apiDuration = Date.now() - apiStartTime;
+
+    // Log OpenAI API usage and cost
+    this.logOpenAIUsage(response, apiDuration);
+
+    // Parse response with visa-specific logic
+    const result = this.parseVisaSpecificResponse(
+      response,
+      visaCriteria,
+      validationResults
+    );
+
+    // Log evaluation completion metrics
+    this.logEvaluationCompletion({
+      country,
+      visaType,
+      result,
+      durationMs: Date.now() - evaluationStartTime,
+      mockMode: false,
+      documentCount: documents.length,
+      parseDurationMs: parseDuration,
+      apiDurationMs: apiDuration
+    });
+
+    logger.info('Visa-specific evaluation completed', {
+      country,
+      visaType,
+      score: result.score,
+      criteriaUsed: visaCriteria.visaType,
+      evaluationType: 'visa_specific_ai',
+      criteriaConfiguration: {
+        salaryThresholds: visaCriteria.salaryThresholds?.length || 0,
+        educationLevel: visaCriteria.educationLevel,
+        experienceYears: visaCriteria.experienceYears,
+        laborMarketTestRequired: visaCriteria.laborMarketTestRequired,
+        sponsorRequired: visaCriteria.sponsorRequired
+      },
+      validationResults: validationResults.map(r => ({
+        criterion: r.criterion,
+        met: r.met,
+        score: r.score,
+        maxScore: r.maxScore,
+        percentage: ((r.score / r.maxScore) * 100).toFixed(1) + '%'
+      })),
+      performance: {
+        totalDurationMs: Date.now() - evaluationStartTime
+      }
+    });
+
+    return result;
   }
 
   /**
@@ -234,6 +458,83 @@ Your role is to:
 4. Give a clear conclusion about application viability
 
 Be objective, professional, and thorough in your analysis.`;
+  }
+
+  /**
+   * Get visa-specific system prompt for OpenAI
+   * Creates specialized prompt with visa type requirements
+   */
+  private getVisaSpecificSystemPrompt(criteria: VisaCriteriaConfig): string {
+    return `You are an expert immigration consultant specializing in ${criteria.country} ${criteria.visaType} applications.
+
+Your role is to:
+1. Analyze the applicant's documents against SPECIFIC legal requirements for this visa type
+2. Verify if mandatory criteria are met (salary thresholds, education, experience, etc.)
+3. Provide detailed, actionable recommendations based on actual visa requirements
+4. Give a realistic assessment of approval likelihood
+
+Key requirements for ${criteria.visaType}:
+${this.formatCriteriaForSystemPrompt(criteria)}
+
+Be objective, cite specific requirements, and provide practical guidance based on the legal framework for this visa type.`;
+  }
+
+  /**
+   * Format criteria for system prompt
+   * Creates concise summary of visa requirements for AI context
+   */
+  private formatCriteriaForSystemPrompt(criteria: VisaCriteriaConfig): string {
+    const parts: string[] = [];
+    
+    // Format salary thresholds with conditions
+    if (criteria.salaryThresholds && criteria.salaryThresholds.length > 0) {
+      const salaryParts = criteria.salaryThresholds.map(t => 
+        `${t.currency} ${t.amount.toLocaleString()} ${t.period}${t.conditions ? ` (${t.conditions})` : ''}`
+      );
+      
+      if (salaryParts.length === 1) {
+        parts.push(`- Salary: ${salaryParts[0]}`);
+      } else {
+        parts.push(`- Salary: ${salaryParts.join(' OR ')}`);
+      }
+    }
+    
+    // Format education and alternative qualifications
+    if (criteria.educationLevel && criteria.educationLevel !== 'None') {
+      let eduPart = `- Education: ${criteria.educationLevel} degree required`;
+      if (criteria.alternativeQualification) {
+        eduPart += ` (or ${criteria.alternativeQualification})`;
+      }
+      parts.push(eduPart);
+    } else if (criteria.educationLevel === 'None' && criteria.alternativeQualification) {
+      parts.push(`- Qualification: ${criteria.alternativeQualification}`);
+    }
+    
+    // Format experience requirements
+    if (criteria.experienceYears !== undefined && criteria.experienceYears > 0) {
+      parts.push(`- Experience: Minimum ${criteria.experienceYears} year${criteria.experienceYears !== 1 ? 's' : ''}`);
+    }
+    
+    // Include labor market test status
+    if (criteria.laborMarketTestRequired) {
+      parts.push(`- Labor Market Test: REQUIRED - employer must prove no suitable local workers available`);
+    } else {
+      parts.push(`- Labor Market Test: NOT required (advantage)`);
+    }
+    
+    // Include sponsor requirements
+    if (criteria.sponsorRequired) {
+      parts.push(`- Sponsor: ${criteria.sponsorType || 'Employer sponsorship'} required`);
+    } else {
+      parts.push(`- Sponsor: NOT required`);
+    }
+    
+    // List unique rules and benefits
+    if (criteria.uniqueRules && criteria.uniqueRules.length > 0) {
+      parts.push(`- Special rules: ${criteria.uniqueRules.join('; ')}`);
+    }
+    
+    return parts.join('\n');
   }
 
   /**
@@ -356,7 +657,7 @@ Ensure all category names match exactly the categories listed above.`;
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
-        
+
         // Calculate weighted score internally (not exposed to users)
         const categoryScores = this.buildCategoryScores(parsed.categoryScores, scoringConfig);
         const finalScore = this.calculateWeightedScore(categoryScores);
@@ -424,6 +725,227 @@ Ensure all category names match exactly the categories listed above.`;
       ],
       conclusion: 'Evaluation completed based on available information'
     };
+  }
+
+  /**
+   * Parse visa-specific response from AI
+   * Simply parses the JSON response from AI without any modification
+   */
+  private parseVisaSpecificResponse(
+    response: OpenAI.Chat.Completions.ChatCompletion,
+    visaCriteria: VisaCriteriaConfig,
+    validationResults: ValidationResult[]
+  ): EvaluationResult {
+    const content = response.choices[0]?.message?.content || '';
+
+    logger.debug('Parsing visa-specific AI response', {
+      contentLength: content.length,
+      validationResultsCount: validationResults.length
+    });
+
+    try {
+      // Extract JSON from response (handle cases where AI adds markdown code blocks)
+      const jsonMatch = content.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        throw new Error('No JSON found in AI response');
+      }
+
+      const parsed = JSON.parse(jsonMatch[0]);
+
+      // Validate required fields
+      if (typeof parsed.score !== 'number' || !parsed.summary || !Array.isArray(parsed.recommendations) || !parsed.conclusion) {
+        throw new Error('Invalid JSON structure from AI');
+      }
+
+      logger.info('Visa-specific response parsed successfully', {
+        score: parsed.score,
+        summaryLength: parsed.summary.length,
+        recommendationCount: parsed.recommendations.length,
+        hasConclusion: !!parsed.conclusion
+      });
+
+      // Return the AI response directly without any modification
+      return {
+        score: Math.round(Math.max(0, Math.min(100, parsed.score))),
+        summary: parsed.summary,
+        recommendations: parsed.recommendations,
+        conclusion: parsed.conclusion
+      };
+    } catch (error) {
+      logger.error('Failed to parse AI JSON response', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        contentPreview: content.substring(0, 200)
+      });
+
+      // Fallback: calculate score from validation and generate basic response
+      const score = this.calculateVisaSpecificScore(validationResults, visaCriteria);
+      const recommendations = this.generateRecommendationsFromValidation(validationResults, visaCriteria);
+
+      return {
+        score,
+        summary: `Evaluation for ${visaCriteria.country} - ${visaCriteria.visaType}.\n\n${visaCriteria.description}\n\nNote: AI response parsing failed. Please review the recommendations below.`,
+        recommendations,
+        conclusion: score >= 70 ? 'Application shows potential. Address the recommendations to improve your chances.' : 'Application needs improvement. Focus on meeting the mandatory requirements.'
+      };
+    }
+  }
+
+  /**
+   * Calculate score based on validation results and visa-specific weights
+   */
+  private calculateVisaSpecificScore(
+    validationResults: ValidationResult[],
+    visaCriteria: VisaCriteriaConfig
+  ): number {
+    if (validationResults.length === 0) {
+      logger.warn('No validation results to calculate score from', {
+        visaType: visaCriteria.visaType,
+        country: visaCriteria.country
+      });
+      return 50;
+    }
+
+    // Use visa-specific weights if available
+    const weights = visaCriteria.criteriaWeights || {
+      salary: 35,
+      education: 30,
+      experience: 20,
+      documentation: 10,
+      other: 5
+    };
+
+    logger.info('Calculating visa-specific score with criteria weights', {
+      visaType: visaCriteria.visaType,
+      country: visaCriteria.country,
+      weights,
+      validationResultCount: validationResults.length
+    });
+
+    let totalScore = 0;
+    let totalWeight = 0;
+    const scoreContributions: Array<{
+      criterion: string;
+      weight: number;
+      normalizedScore: number;
+      weightedScore: number;
+      contribution: string;
+    }> = [];
+
+    // Map validation results to weights
+    for (const result of validationResults) {
+      let weight = 0;
+      
+      if (result.criterion.toLowerCase().includes('salary')) {
+        weight = weights.salary;
+      } else if (result.criterion.toLowerCase().includes('education')) {
+        weight = weights.education;
+      } else if (result.criterion.toLowerCase().includes('experience')) {
+        weight = weights.experience;
+      } else {
+        weight = weights.other;
+      }
+
+      // Calculate weighted score for this criterion
+      const normalizedScore = (result.score / result.maxScore) * 100;
+      const weightedScore = (normalizedScore * weight) / 100;
+      
+      totalScore += weightedScore;
+      totalWeight += weight;
+
+      scoreContributions.push({
+        criterion: result.criterion,
+        weight,
+        normalizedScore: parseFloat(normalizedScore.toFixed(1)),
+        weightedScore: parseFloat(weightedScore.toFixed(1)),
+        contribution: `${result.criterion}: ${normalizedScore.toFixed(1)}% × ${weight}% weight = ${weightedScore.toFixed(1)} points`
+      });
+
+      logger.debug('Criterion score contribution calculated', {
+        criterion: result.criterion,
+        rawScore: result.score,
+        maxScore: result.maxScore,
+        normalizedScore: normalizedScore.toFixed(1),
+        weight,
+        weightedScore: weightedScore.toFixed(1),
+        met: result.met
+      });
+    }
+
+    // Add base score for remaining weight (documentation and other factors)
+    const remainingWeight = 100 - totalWeight;
+    if (remainingWeight > 0) {
+      // Assume 70% score for documentation/other factors
+      const baseScore = (70 * remainingWeight) / 100;
+      totalScore += baseScore;
+      
+      scoreContributions.push({
+        criterion: 'Documentation & Other',
+        weight: remainingWeight,
+        normalizedScore: 70,
+        weightedScore: parseFloat(baseScore.toFixed(1)),
+        contribution: `Documentation & Other: 70% × ${remainingWeight}% weight = ${baseScore.toFixed(1)} points`
+      });
+      
+      logger.debug('Base score added for remaining criteria', {
+        remainingWeight,
+        assumedScore: 70,
+        baseScore: baseScore.toFixed(1)
+      });
+    }
+
+    const finalScore = Math.round(Math.max(0, Math.min(100, totalScore)));
+
+    // Log comprehensive score calculation summary
+    logger.info('Visa-specific score calculation complete', {
+      visaType: visaCriteria.visaType,
+      country: visaCriteria.country,
+      finalScore,
+      rawScore: totalScore.toFixed(2),
+      totalWeightUsed: totalWeight,
+      scoreBreakdown: scoreContributions,
+      validationSummary: validationResults.map(r => ({
+        criterion: r.criterion,
+        met: r.met,
+        score: r.score,
+        maxScore: r.maxScore
+      }))
+    });
+
+    return finalScore;
+  }
+
+  /**
+   * Generate recommendations based on validation results
+   */
+  private generateRecommendationsFromValidation(
+    validationResults: ValidationResult[],
+    visaCriteria: VisaCriteriaConfig
+  ): string[] {
+    const recommendations: string[] = [];
+
+    // Add recommendations for failed criteria
+    const failedCriteria = validationResults.filter(r => !r.met && r.recommendation);
+    
+    for (const result of failedCriteria) {
+      if (result.recommendation) {
+        recommendations.push(result.recommendation);
+      }
+    }
+
+    // Add general recommendations based on visa type
+    if (visaCriteria.laborMarketTestRequired) {
+      recommendations.push('Ensure employer completes the labor market test as required for this visa type');
+    }
+
+    if (visaCriteria.sponsorRequired && visaCriteria.sponsorType) {
+      recommendations.push(`Verify that your employer is registered as ${visaCriteria.sponsorType}`);
+    }
+
+    // Add documentation recommendation
+    recommendations.push('Ensure all supporting documents are complete, certified, and translated if necessary');
+
+    // Limit to top 5 recommendations
+    return recommendations.slice(0, 5);
   }
 
   /**
@@ -583,6 +1105,239 @@ Ensure all category names match exactly the categories listed above.`;
       // Sanitized summary preview for audit
       summaryPreview: result.summary ? sanitizeForLogging(result.summary, 150) : null
     });
+  }
+
+  /**
+   * Extract applicant data from parsed documents
+   * Uses regex and text analysis to extract key information
+   */
+  private extractApplicantData(
+    parsedDocuments: ParsedDocument[],
+    userInfo: { name: string; email: string }
+  ): ApplicantData {
+    // Combine all successfully parsed document text
+    const allText = parsedDocuments
+      .filter(d => d.success)
+      .map(d => d.extractedText)
+      .join('\n');
+
+    logger.debug('Extracting applicant data from documents', {
+      totalTextLength: allText.length,
+      documentCount: parsedDocuments.filter(d => d.success).length
+    });
+
+    // Extract data using helper methods
+    const salaryData = this.extractSalary(allText);
+    const education = this.extractEducation(allText);
+    const experienceYears = this.extractExperience(allText);
+    const occupation = this.extractOccupation(allText);
+    const age = this.extractAge(allText);
+
+    const applicantData: ApplicantData = {
+      name: userInfo.name,
+      email: userInfo.email,
+      salary: salaryData.amount,
+      salaryCurrency: salaryData.currency,
+      salaryPeriod: salaryData.period,
+      education,
+      experienceYears,
+      occupation,
+      age
+    };
+
+    logger.debug('Applicant data extracted', {
+      hasSalary: !!applicantData.salary,
+      salaryCurrency: applicantData.salaryCurrency,
+      salaryPeriod: applicantData.salaryPeriod,
+      hasEducation: !!applicantData.education,
+      hasExperience: applicantData.experienceYears !== undefined,
+      hasOccupation: !!applicantData.occupation,
+      hasAge: applicantData.age !== undefined
+    });
+
+    return applicantData;
+  }
+
+  /**
+   * Extract salary from document text using regex patterns
+   */
+  private extractSalary(text: string): { amount?: number; currency?: string; period?: 'annual' | 'monthly' } {
+    // Common salary patterns
+    const patterns = [
+      // Annual: $50,000 per year, €50000/year, 50k annually
+      /(?:salary|compensation|pay|income)[:\s]+(?:of\s+)?([€$£¥]|EUR|USD|GBP|JPY|PLN)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)\s*k?\s*(?:per\s+year|\/year|annually|per\s+annum|p\.a\.)/i,
+      // Monthly: $5,000 per month, €5000/month, 5k monthly
+      /(?:salary|compensation|pay|income)[:\s]+(?:of\s+)?([€$£¥]|EUR|USD|GBP|JPY|PLN)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)\s*k?\s*(?:per\s+month|\/month|monthly)/i,
+      // General: Salary: $50,000 or €50000
+      /(?:salary|compensation|annual\s+salary|base\s+salary)[:\s]+([€$£¥]|EUR|USD|GBP|JPY|PLN)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)\s*k?/i,
+      // Offer letter: We are pleased to offer you $50,000
+      /(?:offer\s+you|offering)[:\s]+([€$£¥]|EUR|USD|GBP|JPY|PLN)?\s*(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)\s*k?/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let currency = match[1] || 'USD';
+        let amountStr = match[2].replace(/,/g, '');
+        let amount = parseFloat(amountStr);
+
+        // Handle 'k' notation (e.g., 50k = 50000)
+        if (text.substring(match.index! + match[0].length - 1, match.index! + match[0].length).toLowerCase() === 'k') {
+          amount *= 1000;
+        }
+
+        // Normalize currency symbols to codes
+        const currencyMap: Record<string, string> = {
+          '$': 'USD',
+          '€': 'EUR',
+          '£': 'GBP',
+          '¥': 'JPY'
+        };
+        currency = currencyMap[currency] || currency;
+
+        // Determine period (annual vs monthly)
+        let period: 'annual' | 'monthly' = 'annual';
+        if (match[0].toLowerCase().includes('month')) {
+          period = 'monthly';
+        }
+
+        logger.debug('Salary extracted', { amount, currency, period, matchedText: match[0] });
+        return { amount, currency, period };
+      }
+    }
+
+    logger.debug('No salary found in documents');
+    return {};
+  }
+
+  /**
+   * Extract education level from document text
+   */
+  private extractEducation(text: string): string | undefined {
+    const textLower = text.toLowerCase();
+
+    // Check for PhD/Doctorate
+    if (textLower.match(/\b(phd|ph\.d\.|doctorate|doctoral\s+degree)\b/)) {
+      logger.debug('Education extracted: PhD');
+      return 'PhD';
+    }
+
+    // Check for Master's
+    if (textLower.match(/\b(master|master's|masters|msc|m\.sc\.|mba|m\.b\.a\.|ma|m\.a\.)\b/)) {
+      logger.debug('Education extracted: Master');
+      return 'Master';
+    }
+
+    // Check for Bachelor's
+    if (textLower.match(/\b(bachelor|bachelor's|bachelors|bsc|b\.sc\.|ba|b\.a\.|undergraduate\s+degree)\b/)) {
+      logger.debug('Education extracted: Bachelor');
+      return 'Bachelor';
+    }
+
+    // Check for High School
+    if (textLower.match(/\b(high\s+school|secondary\s+school|diploma|ged)\b/)) {
+      logger.debug('Education extracted: High School');
+      return 'High School';
+    }
+
+    logger.debug('No education level found in documents');
+    return undefined;
+  }
+
+  /**
+   * Extract years of experience from document text
+   */
+  private extractExperience(text: string): number | undefined {
+    // Patterns for experience
+    const patterns = [
+      // "5 years of experience", "10+ years experience"
+      /(\d+)\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:professional\s+)?(?:work\s+)?experience/i,
+      // "Experience: 5 years"
+      /experience[:\s]+(\d+)\+?\s*(?:years?|yrs?)/i,
+      // "Over 5 years in..."
+      /over\s+(\d+)\s+(?:years?|yrs?)/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const years = parseInt(match[1], 10);
+        logger.debug('Experience extracted', { years, matchedText: match[0] });
+        return years;
+      }
+    }
+
+    logger.debug('No experience years found in documents');
+    return undefined;
+  }
+
+  /**
+   * Extract occupation/job title from document text
+   */
+  private extractOccupation(text: string): string | undefined {
+    // Patterns for job titles
+    const patterns = [
+      // "Position: Software Engineer"
+      /(?:position|role|job\s+title|title)[:\s]+([A-Z][a-zA-Z\s]+(?:Engineer|Developer|Manager|Analyst|Consultant|Specialist|Director|Designer|Architect))/,
+      // "as a Software Engineer"
+      /as\s+a\s+([A-Z][a-zA-Z\s]+(?:Engineer|Developer|Manager|Analyst|Consultant|Specialist|Director|Designer|Architect))/,
+      // "Software Engineer at Company"
+      /([A-Z][a-zA-Z\s]+(?:Engineer|Developer|Manager|Analyst|Consultant|Specialist|Director|Designer|Architect))\s+at\s+/
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        const occupation = match[1].trim();
+        logger.debug('Occupation extracted', { occupation, matchedText: match[0] });
+        return occupation;
+      }
+    }
+
+    logger.debug('No occupation found in documents');
+    return undefined;
+  }
+
+  /**
+   * Extract age from document text
+   */
+  private extractAge(text: string): number | undefined {
+    // Patterns for age
+    const patterns = [
+      // "Age: 30", "Age 30"
+      /\bage[:\s]+(\d{2})\b/i,
+      // "30 years old"
+      /\b(\d{2})\s+years?\s+old\b/i,
+      // "Born in 1990" (calculate age)
+      /\bborn\s+in\s+(\d{4})\b/i,
+      // "Date of Birth: 01/01/1990"
+      /date\s+of\s+birth[:\s]+\d{1,2}[\/\-]\d{1,2}[\/\-](\d{4})/i
+    ];
+
+    for (const pattern of patterns) {
+      const match = text.match(pattern);
+      if (match) {
+        let age: number;
+        
+        if (match[0].toLowerCase().includes('born') || match[0].toLowerCase().includes('birth')) {
+          // Calculate age from birth year
+          const birthYear = parseInt(match[1], 10);
+          const currentYear = new Date().getFullYear();
+          age = currentYear - birthYear;
+        } else {
+          age = parseInt(match[1], 10);
+        }
+
+        // Validate age is reasonable (18-100)
+        if (age >= 18 && age <= 100) {
+          logger.debug('Age extracted', { age, matchedText: match[0] });
+          return age;
+        }
+      }
+    }
+
+    logger.debug('No age found in documents');
+    return undefined;
   }
 
   /**
