@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   createEvaluation,
   getEvaluation,
@@ -15,8 +15,30 @@ import {
 } from '../middleware/validation';
 import { requestTimeout } from '../middleware/timeout';
 import { getConfig } from '../config/environment';
+import {
+  evaluationLimiter,
+  partnerApiLimiter,
+  partnerEvaluationLimiter
+} from '../config/rateLimits';
 
 const router = Router();
+
+/**
+ * Conditional rate limiter for evaluation creation
+ * Applies different rate limits based on authentication status:
+ * - Partner authenticated: 50 evaluations/hour per API key
+ * - Unauthenticated: 10 evaluations/hour per IP
+ */
+const evaluationRateLimiter = (req: Request, res: Response, next: NextFunction) => {
+  // Check if request has partner authentication (set by optionalAuthentication middleware)
+  if (req.partner) {
+    // Apply partner evaluation rate limiter
+    return partnerEvaluationLimiter(req, res, next);
+  } else {
+    // Apply IP-based evaluation rate limiter
+    return evaluationLimiter(req, res, next);
+  }
+};
 
 /**
  * POST /api/evaluations
@@ -27,13 +49,15 @@ const router = Router();
  * - 30-second timeout for processing
  * - Optional partner authentication (if x-api-key provided)
  * - If authenticated, evaluation is associated with the partner
+ * - Rate limited: 10/hour for unauthenticated, 50/hour for partners
  * 
  * Note: Using middleware wrapper to support hot-reload in development
  */
 router.post(
   '/',
   (req, res, next) => requestTimeout(getConfig().REQUEST_TIMEOUT_MS)(req, res, next),
-  optionalAuthentication, // Optional partner authentication
+  optionalAuthentication, // Optional partner authentication (must run before rate limiter)
+  evaluationRateLimiter, // Apply conditional rate limiting
   uploadDocuments, // Handle file uploads
   validateRequest(createEvaluationSchema, 'body'), // Validate body
   validateFileUpload(true, 1, 10), // Validate at least 1 file, max 10
@@ -60,10 +84,12 @@ router.get(
  * - Requires partner authentication via x-api-key header
  * - Returns only evaluations associated with the partner
  * - Supports pagination and filtering
+ * - Rate limited: 1000 requests/hour per API key
  */
 router.get(
   '/',
   authenticatePartner, // Require partner authentication
+  partnerApiLimiter, // Apply partner API rate limiter
   validateRequest(listEvaluationsQuerySchema, 'query'), // Validate query params
   listEvaluations
 );

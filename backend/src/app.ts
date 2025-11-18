@@ -3,6 +3,7 @@ import cors from 'cors';
 import { getConfig } from './config/environment';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { initializeRateLimiters, generalApiLimiter } from './config/rateLimits';
 import routes from './routes/index';
 
 /**
@@ -12,6 +13,9 @@ import routes from './routes/index';
 export function createApp(): Application {
   const app = express();
   const config = getConfig();
+
+  // Initialize rate limiters and log configuration
+  initializeRateLimiters();
 
   // Parse CORS origins from comma-separated string
   const corsOrigins = config.CORS_ORIGINS.split(',').map(origin => origin.trim());
@@ -43,6 +47,10 @@ export function createApp(): Application {
 
   // Request logging middleware
   app.use(requestLogger);
+
+  // Apply general API rate limiter to all /api/* routes
+  // This protects all API endpoints with IP-based rate limiting
+  app.use('/api', generalApiLimiter);
 
   // Register all routes under /api prefix
   app.use('/api', routes);

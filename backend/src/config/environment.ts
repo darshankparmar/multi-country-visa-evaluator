@@ -50,7 +50,17 @@ const envSchema = z.object({
   CORS_ORIGINS: z.string().default('http://localhost:3000'),
 
   // Logging Configuration
-  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info')
+  LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
+
+  // Rate Limiting Configuration
+  RATE_LIMIT_GENERAL_MAX: z.string().default('100').transform(Number),
+  RATE_LIMIT_GENERAL_WINDOW_MS: z.string().default('900000').transform(Number), // 15 minutes
+  RATE_LIMIT_EVALUATION_MAX: z.string().default('10').transform(Number),
+  RATE_LIMIT_EVALUATION_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
+  RATE_LIMIT_PARTNER_MAX: z.string().default('1000').transform(Number),
+  RATE_LIMIT_PARTNER_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
+  RATE_LIMIT_PARTNER_EVAL_MAX: z.string().default('50').transform(Number),
+  RATE_LIMIT_PARTNER_EVAL_WINDOW_MS: z.string().default('3600000').transform(Number) // 1 hour
 }).refine(
   (data) => data.EVALUATOR_TYPE !== 'ai' || data.OPENAI_API_KEY,
   {

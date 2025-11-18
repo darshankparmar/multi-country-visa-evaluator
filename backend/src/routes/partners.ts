@@ -10,8 +10,15 @@ import {
   updatePartnerStatusSchema,
   objectIdParamSchema
 } from '../middleware/validation';
+import { partnerApiLimiter } from '../config/rateLimits';
 
 const router = Router();
+
+/**
+ * Apply partner API rate limiter to all partner management endpoints
+ * Note: These are admin endpoints, but we still apply rate limiting for security
+ */
+router.use(partnerApiLimiter);
 
 /**
  * POST /api/partners
