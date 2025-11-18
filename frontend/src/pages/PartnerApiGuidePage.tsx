@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Button } from '../components/common/Button'
 
 const PartnerApiGuidePage: React.FC = () => {
-  const navigate = useNavigate()
   const [showScrollTop, setShowScrollTop] = useState(false)
 
   useEffect(() => {
@@ -23,11 +20,24 @@ const PartnerApiGuidePage: React.FC = () => {
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
-        <div className="mb-8">
+        <div className="mb-6">
           <h1 className="text-4xl font-bold text-gray-900 mb-4">Partner API Guide</h1>
           <p className="text-lg text-gray-600">
             Complete documentation for integrating with the Multi-Country Visa Evaluation API
           </p>
+        </div>
+
+        {/* Dashboard Link */}
+        <div className="mb-8">
+          <a
+            href="/partner-dashboard"
+            className="inline-flex items-center text-sm text-blue-600 hover:text-blue-800 hover:underline transition-colors"
+          >
+            <svg className="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            Go to Partner Dashboard
+          </a>
         </div>
 
         {/* Table of Contents */}
@@ -87,7 +97,7 @@ const PartnerApiGuidePage: React.FC = () => {
               <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded">
                 <p className="font-semibold text-blue-900 mb-2">Need an API Key?</p>
                 <p className="text-blue-800">
-                  Contact our support team at <a href="mailto:support@visaevaluator.com" className="underline hover:text-blue-600">darshanparmar.dev@gmail.com</a> to request partner access and receive your API key.
+                  Contact our support team at <a href="mailto:darshanparmar.dev@gmail.com" className="underline hover:text-blue-600">darshanparmar.dev@gmail.com</a> to request partner access and receive your API key.
                 </p>
               </div>
             </div>

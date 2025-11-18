@@ -38,8 +38,11 @@ const HomePage: React.FC = () => {
             <Button onClick={() => navigate('/evaluation')} size="lg" className="w-full sm:w-auto">
               Start Evaluation
             </Button>
-            <Button onClick={() => navigate('/search')} variant="outline" size="lg" className="w-full sm:w-auto">
+            {/* <Button onClick={() => navigate('/search')} variant="outline" size="lg" className="w-full sm:w-auto">
               Search Results
+            </Button> */}
+            <Button onClick={() => navigate('/partner-dashboard')} variant="outline" size="lg" className="w-full sm:w-auto">
+              Partner Dashboard
             </Button>
             <Button onClick={() => navigate('/partner-api-guide')} variant="outline" size="lg" className="w-full sm:w-auto">
               Partner API Guide

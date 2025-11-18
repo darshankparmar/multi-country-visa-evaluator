@@ -159,7 +159,7 @@ When you exceed the rate limit, you'll receive a `429 Too Many Requests` respons
 ## Support
 
 For assistance with Partner API keys:
-- **Email**: support@visaevaluator.com
+- **Email**: darshanparmar.dev@gmail.com
 - **Documentation**: See [API.md](./API.md) for complete API reference
 - **Architecture**: See [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details
 
