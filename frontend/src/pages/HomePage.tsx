@@ -41,6 +41,9 @@ const HomePage: React.FC = () => {
             <Button onClick={() => navigate('/search')} variant="outline" size="lg" className="w-full sm:w-auto">
               Search Results
             </Button>
+            <Button onClick={() => navigate('/partner-api-guide')} variant="outline" size="lg" className="w-full sm:w-auto">
+              Partner API Guide
+            </Button>
           </div>
           
           {/* Feature Cards */}

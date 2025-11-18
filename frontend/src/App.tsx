@@ -8,6 +8,7 @@ const HomePage = lazy(() => import('./pages/HomePage'))
 const EvaluationPage = lazy(() => import('./pages/EvaluationPage'))
 const ResultsPage = lazy(() => import('./pages/ResultsPage'))
 const SearchPage = lazy(() => import('./pages/SearchPage'))
+const PartnerApiGuidePage = lazy(() => import('./pages/PartnerApiGuidePage'))
 const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
 
 function App() {
@@ -25,6 +26,7 @@ function App() {
               <Route path="/evaluation" element={<EvaluationPage />} />
               <Route path="/results/:id" element={<ResultsPage />} />
               <Route path="/search" element={<SearchPage />} />
+              <Route path="/partner-api-guide" element={<PartnerApiGuidePage />} />
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </Suspense>

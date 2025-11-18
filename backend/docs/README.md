@@ -9,6 +9,7 @@ This directory contains detailed documentation for the Visa Evaluation Backend A
 
 ### Core Documentation
 - **[API Documentation](API.md)**: Complete API reference with endpoints, request/response examples
+- **[Partner API Key Guide](PARTNER_API_KEY_GUIDE.md)**: Step-by-step guide for generating and managing partner API keys
 - **[Architecture Guide](ARCHITECTURE.md)**: System design, data flow, and component interactions
 - **[Deployment Guide](DEPLOYMENT.md)**: Production deployment instructions and best practices
 
@@ -41,6 +42,7 @@ This directory contains detailed documentation for the Visa Evaluation Backend A
 
 - **Get started quickly** → [Main README](../README.md)
 - **Understand the API** → [API Documentation](API.md)
+- **Generate partner API keys** → [Partner API Key Guide](PARTNER_API_KEY_GUIDE.md)
 - **Set up AI evaluation** → [AI Evaluation Guide](AI_EVALUATION_GUIDE.md)
 - **Configure scoring weights** → [Scoring Configuration](SCORING_CONFIGURATION.md)
 - **Test without API costs** → [Mock AI Mode](MOCK_AI_MODE.md)

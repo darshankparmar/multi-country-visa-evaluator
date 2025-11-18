@@ -446,7 +446,11 @@ curl -H "x-api-key: your-api-key-here" \
      http://localhost:3000/api/evaluations
 ```
 
-To create a partner API key, use the admin endpoint:
+### Generating Partner API Keys
+
+To create and manage partner API keys, see the **[Partner API Key Generation Guide](docs/PARTNER_API_KEY_GUIDE.md)** for step-by-step instructions.
+
+Quick example:
 ```bash
 curl -X POST http://localhost:3000/api/partners \
      -H "Content-Type: application/json" \
@@ -589,6 +593,7 @@ If you encounter issues not covered here:
 ## Additional Documentation
 
 - **[API Documentation](docs/API.md)**: Detailed endpoint specifications with examples
+- **[Partner API Key Guide](docs/PARTNER_API_KEY_GUIDE.md)**: Step-by-step guide for generating and managing partner API keys
 - **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Comprehensive guide for AI-powered evaluation with document parsing
 - **[Architecture Guide](docs/ARCHITECTURE.md)**: System design and data flow
 - **[Deployment Guide](docs/DEPLOYMENT.md)**: Production deployment instructions
