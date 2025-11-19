@@ -251,9 +251,22 @@ MAX_FILE_SIZE=5242880
 SUCCESS_CAP=85
 EVALUATOR_TYPE=rule-based  # or 'ai' for AI-powered
 
+# Timeout Configuration (in milliseconds)
+REQUEST_TIMEOUT_MS=120000           # Overall request timeout (2 minutes)
+AI_API_TIMEOUT_MS=60000             # AI API call timeout (60 seconds)
+PARSING_TIMEOUT=30000               # Document parsing timeout (30 seconds)
+DB_QUERY_TIMEOUT_MS=10000           # Database query timeout (10 seconds)
+FILE_UPLOAD_TIMEOUT_MS=120000       # File upload timeout (2 minutes)
+
 # AI Service (if using AI evaluator)
 OPENAI_API_KEY=sk-your-key-here
 AI_MODEL=gpt-4
+ENABLE_DOCUMENT_PARSING=true
+MAX_DOCUMENT_TEXT_LENGTH=10000
+AI_TEMPERATURE=0.7
+AI_MAX_TOKENS=2000
+AI_RETRY_ATTEMPTS=2
+USE_MOCK_AI=false
 
 # Email
 SMTP_ENABLED=true
@@ -265,10 +278,31 @@ SMTP_FROM=noreply@visaeval.com
 
 # Security
 API_KEY_LENGTH=32
+
+# Administrator API Key (for sensitive endpoints)
+# Generate: openssl rand -hex 32
+ADMIN_API_KEY=your-secure-admin-key-here
+
+# CORS Configuration
+# Production: MUST specify exact origins (wildcard not allowed)
 CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
 
 # Logging
 LOG_LEVEL=warn
+
+# Rate Limiting Configuration
+RATE_LIMIT_GENERAL_MAX=100
+RATE_LIMIT_GENERAL_WINDOW_MS=900000
+RATE_LIMIT_EVALUATION_MAX=10
+RATE_LIMIT_EVALUATION_WINDOW_MS=3600000
+RATE_LIMIT_PARTNER_MAX=1000
+RATE_LIMIT_PARTNER_WINDOW_MS=3600000
+RATE_LIMIT_PARTNER_EVAL_MAX=50
+RATE_LIMIT_PARTNER_EVAL_WINDOW_MS=3600000
+RATE_LIMIT_PUBLIC_READ_MAX=200
+RATE_LIMIT_PUBLIC_READ_WINDOW_MS=900000
+RATE_LIMIT_DOWNLOAD_MAX=20
+RATE_LIMIT_DOWNLOAD_WINDOW_MS=900000
 ```
 
 **Security Notes**:
@@ -846,6 +880,38 @@ pm2 monit
 - Optimize queries
 - Use CDN for static files
 
+### Request Timeout Errors
+
+**Error**: `Request timeout - processing took too long`
+
+**Check**:
+- Review timeout configuration hierarchy in `.env`
+- Check which operation is timing out (AI API, parsing, database)
+- Monitor logs for specific timeout errors
+
+**Solutions**:
+- Increase `REQUEST_TIMEOUT_MS` (overall timeout)
+- Increase specific operation timeouts:
+  - `AI_API_TIMEOUT_MS` for OpenAI API calls
+  - `PARSING_TIMEOUT` for document parsing
+  - `DB_QUERY_TIMEOUT_MS` for database queries
+  - `FILE_UPLOAD_TIMEOUT_MS` for file uploads
+- Ensure timeout hierarchy: REQUEST_TIMEOUT_MS > sum of sub-operation timeouts
+- Optimize slow operations (e.g., reduce MAX_DOCUMENT_TEXT_LENGTH)
+
+### CORS Errors in Production
+
+**Error**: `CORS policy: No 'Access-Control-Allow-Origin' header`
+
+**Check**:
+- Verify `CORS_ORIGINS` in `.env` includes the requesting origin
+- Ensure wildcard (`*`) is NOT used in production
+
+**Solutions**:
+- Add exact origin to CORS_ORIGINS: `CORS_ORIGINS=https://yourdomain.com,https://www.yourdomain.com`
+- Restart application after changing CORS_ORIGINS
+- Check for trailing slashes in origin URLs (should not include them)
+
 ### SSL Certificate Issues
 
 **Check Certificate**:
@@ -890,11 +956,40 @@ sudo apt-get install -y fail2ban
 
 ### Application Security
 
+The application includes multiple security layers:
+
+**Input Validation**:
+- NoSQL injection prevention on all database queries
+- RFC 5322 compliant email validation with security checks
+- File type validation using MIME types and magic numbers
+- Request schema validation using Zod
+
+**Security Headers**:
+- X-Frame-Options, X-Content-Type-Options, X-XSS-Protection
+- Strict-Transport-Security (HSTS) in production
+- Content-Security-Policy for resource loading restrictions
+
+**Rate Limiting**:
+- Implemented on all endpoints (configurable via environment variables)
+- Separate limits for public, partner, and evaluation endpoints
+- Sliding window algorithm with automatic cleanup
+
+**Timeout Protection**:
+- Request-level timeouts (REQUEST_TIMEOUT_MS)
+- Operation-specific timeouts (AI API, parsing, database, file upload)
+- Prevents resource exhaustion from long-running operations
+
+**CORS Protection**:
+- Strict origin validation in production (wildcard not allowed)
+- Configurable allowed origins via CORS_ORIGINS
+
+**Best Practices**:
 - Keep dependencies updated: `npm audit fix`
-- Use environment variables for secrets
-- Implement rate limiting (future)
+- Use environment variables for all secrets
+- Generate strong ADMIN_API_KEY: `openssl rand -hex 32`
 - Regular security audits
-- Monitor for suspicious activity
+- Monitor logs for suspicious activity
+- Enable PII sanitization in logs (automatic)
 
 ---
 
@@ -915,6 +1010,18 @@ Before going live:
 - [ ] Security review passed
 - [ ] Documentation updated
 - [ ] Rollback plan documented
+
+**Security Checklist**:
+- [ ] `NODE_ENV=production` set
+- [ ] `ADMIN_API_KEY` generated and secured
+- [ ] `CORS_ORIGINS` set to exact domains (no wildcard)
+- [ ] Rate limiting configured for production traffic
+- [ ] Timeout values appropriate for production workload
+- [ ] SMTP credentials secured
+- [ ] MongoDB authentication enabled
+- [ ] File upload limits configured
+- [ ] Security headers enabled (automatic)
+- [ ] PII sanitization enabled in logs (automatic)
 
 ---
 

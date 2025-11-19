@@ -114,229 +114,77 @@ The API will be available at `http://localhost:3000` (or your configured PORT).
 
 ## Environment Variables
 
-Configure the following environment variables in your `.env` file:
+Configure the following environment variables in your `.env` file. Copy `.env.example` to `.env` and update values as needed.
 
-### Server Configuration
+### Essential Configuration
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `PORT` | Server port number | `3000` | No |
-| `NODE_ENV` | Environment mode (`development`, `production`, `test`) | `development` | No |
-
-### Database Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
+| `NODE_ENV` | Environment mode | `development` | No |
 | `MONGODB_URI` | MongoDB connection string | `mongodb://localhost:27017/visa-evaluation` | Yes |
-| `MONGODB_TEST_URI` | MongoDB test database connection string | `mongodb://localhost:27017/visa-evaluation-test` | No |
-
-**Example**: `mongodb://username:password@host:port/database`
-
-### File Upload Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `UPLOAD_DIR` | Directory for storing uploaded documents | `./uploads` | No |
-| `MAX_FILE_SIZE` | Maximum file size in bytes (5MB default) | `5242880` | No |
-
-### Evaluation Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `SUCCESS_CAP` | Maximum evaluation score (0-100) | `85` | No |
 | `EVALUATOR_TYPE` | Evaluation strategy: `rule-based` or `ai` | `rule-based` | No |
+| `CORS_ORIGINS` | Allowed origins (comma-separated) | `http://localhost:3000,http://localhost:5173` | No |
 
-**Note**: The success cap ensures no evaluation score exceeds the configured threshold, providing realistic expectations.
+### AI Configuration (if EVALUATOR_TYPE=ai)
 
-### AI Service Configuration
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key | - |
+| `AI_MODEL` | OpenAI model | `gpt-4` |
+| `USE_MOCK_AI` | Use mock responses (testing) | `false` |
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `OPENAI_API_KEY` | OpenAI API key for AI-based evaluation | - | Yes (if `EVALUATOR_TYPE=ai`) |
-| `AI_MODEL` | OpenAI model to use | `gpt-4` | No |
-| `ENABLE_DOCUMENT_PARSING` | Enable text extraction from documents | `true` | No |
-| `MAX_DOCUMENT_TEXT_LENGTH` | Maximum characters per document | `10000` | No |
-| `PARSING_TIMEOUT` | Document parsing timeout (ms) | `30000` | No |
-| `AI_TEMPERATURE` | OpenAI temperature parameter (0-1) | `0.7` | No |
-| `AI_MAX_TOKENS` | Maximum tokens for OpenAI response | `2000` | No |
-| `AI_RETRY_ATTEMPTS` | Number of retry attempts for OpenAI API | `2` | No |
-| `USE_MOCK_AI` | Use mock AI responses (testing only) | `false` | No |
+### Security & Rate Limiting
 
-**Note**: Only required when `EVALUATOR_TYPE` is set to `ai`. Get your API key from [OpenAI Platform](https://platform.openai.com/).
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `ADMIN_API_KEY` | Admin authentication key | - |
+| `RATE_LIMIT_GENERAL_MAX` | General API requests per 15 min | `100` |
+| `RATE_LIMIT_EVALUATION_MAX` | Evaluations per hour | `10` |
 
-**Document Parsing**: When enabled, extracts text from PDF, DOCX, and TXT files for content analysis.
+### Complete Configuration Reference
 
-**Mock Mode**: Set `USE_MOCK_AI=true` for testing without API costs. See [Mock AI Mode Guide](docs/MOCK_AI_MODE.md).
+For a complete list of all environment variables including timeouts, email, and advanced settings, see the [`.env.example`](.env.example) file or [Deployment Guide](docs/DEPLOYMENT.md).
 
-### Email Configuration
+## Features
 
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `SMTP_ENABLED` | Enable/disable email notifications | `false` | No |
-| `SMTP_HOST` | SMTP server hostname | `smtp.gmail.com` | Yes (if enabled) |
-| `SMTP_PORT` | SMTP server port | `587` | Yes (if enabled) |
-| `SMTP_USER` | SMTP authentication username | - | Yes (if enabled) |
-| `SMTP_PASS` | SMTP authentication password | - | Yes (if enabled) |
-| `SMTP_FROM` | Sender email address | `noreply@visaeval.com` | Yes (if enabled) |
+### AI-Powered Evaluation
+- Document content analysis (PDF, DOCX, TXT)
+- Weighted category scoring across 5 dimensions
+- Detailed recommendations and conclusions
+- Mock mode for cost-free testing
 
-**Gmail Users**: Use an [App Password](https://support.google.com/accounts/answer/185833) instead of your regular password.
+### Security
+- NoSQL injection prevention
+- Email validation (RFC 5322 compliant)
+- File type validation (MIME + magic numbers)
+- PII sanitization in logs
+- Security headers (HSTS, CSP, XSS protection)
+- Multi-layer timeout protection
 
-### Security Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `API_KEY_LENGTH` | Length of generated partner API keys | `32` | No |
-| `CORS_ORIGINS` | Comma-separated list of allowed origins | `http://localhost:3000,http://localhost:5173` | No |
-
-**Example**: `CORS_ORIGINS=https://app.example.com,https://admin.example.com`
-
-### Logging Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `LOG_LEVEL` | Winston log level (`error`, `warn`, `info`, `debug`) | `info` | No |
-
-### Rate Limiting Configuration
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `RATE_LIMIT_GENERAL_MAX` | Maximum general API requests per window per IP | `100` | No |
-| `RATE_LIMIT_GENERAL_WINDOW_MS` | Time window for general API rate limit (milliseconds) | `900000` (15 min) | No |
-| `RATE_LIMIT_EVALUATION_MAX` | Maximum evaluation submissions per window per IP | `10` | No |
-| `RATE_LIMIT_EVALUATION_WINDOW_MS` | Time window for evaluation rate limit (milliseconds) | `3600000` (1 hour) | No |
-| `RATE_LIMIT_PARTNER_MAX` | Maximum partner API requests per window per API key | `1000` | No |
-| `RATE_LIMIT_PARTNER_WINDOW_MS` | Time window for partner API rate limit (milliseconds) | `3600000` (1 hour) | No |
-| `RATE_LIMIT_PARTNER_EVAL_MAX` | Maximum partner evaluation submissions per window per API key | `50` | No |
-| `RATE_LIMIT_PARTNER_EVAL_WINDOW_MS` | Time window for partner evaluation rate limit (milliseconds) | `3600000` (1 hour) | No |
-
-**Note**: Rate limiting protects the API from abuse and ensures fair usage. The system uses a sliding window algorithm with in-memory storage. Health check endpoints are automatically excluded from rate limiting.
-
-## AI Evaluation Enhancement
-
-The system supports AI-powered evaluation with document content analysis and weighted category scoring.
-
-### Key Features
-
-- **Document Content Analysis**: Extracts and analyzes text from PDF, DOCX, and TXT files
-- **Weighted Category Scoring**: Evaluates across 5 categories (Professional Qualifications, Financial Stability, Documentation Quality, Language Proficiency, Country-Specific Requirements)
-- **Detailed Recommendations**: Provides specific, actionable suggestions for improvement
-- **Mock Mode**: Cost-free testing without OpenAI API calls
-
-### Quick Start
-
-```bash
-# Enable AI evaluation
-EVALUATOR_TYPE=ai
-OPENAI_API_KEY=sk-your-key-here
-ENABLE_DOCUMENT_PARSING=true
-
-# Or use mock mode for testing
-USE_MOCK_AI=true
-```
-
-### Enhanced Response Format
-
-```json
-{
-  "score": 78,
-  "summary": "Strong application with comprehensive documentation...",
-  "recommendations": ["Obtain additional reference letters...", "..."],
-  "conclusion": "This application shows strong potential for approval..."
-}
-```
+### Rate Limiting
+- IP-based limits for public endpoints
+- API key-based limits for partners
+- Configurable thresholds per endpoint type
+- Automatic cleanup and sliding window algorithm
 
 For detailed information, see:
-- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Complete guide with examples and troubleshooting
-- **[Scoring Configuration](docs/SCORING_CONFIGURATION.md)**: How to configure category weights
-- **[Mock AI Mode](docs/MOCK_AI_MODE.md)**: Testing without API costs
+- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: AI features and configuration
+- **[Security Guide](docs/SECURITY.md)**: Complete security documentation
+- **[API Documentation](docs/API.md)**: Endpoint specifications
 
-## Rate Limiting
 
-The API implements comprehensive rate limiting to protect against abuse and ensure fair usage across all users and partners.
-
-### Rate Limit Tiers
-
-The system enforces different rate limits based on endpoint type and authentication:
-
-| Endpoint Type | Limit | Window | Identifier |
-|--------------|-------|--------|------------|
-| General API (unauthenticated) | 100 requests | 15 minutes | IP address |
-| Evaluation submissions (unauthenticated) | 10 submissions | 1 hour | IP address |
-| Partner API (authenticated) | 1000 requests | 1 hour | API key |
-| Partner evaluations (authenticated) | 50 submissions | 1 hour | API key |
-
-### Rate Limit Headers
-
-Every API response includes rate limit information in the headers:
-
-```http
-X-RateLimit-Limit: 100
-X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 2025-11-18T15:30:00.000Z
-```
-
-- **X-RateLimit-Limit**: Maximum requests allowed in the current window
-- **X-RateLimit-Remaining**: Number of requests remaining in the current window
-- **X-RateLimit-Reset**: ISO 8601 timestamp when the rate limit window resets
-
-### Rate Limit Exceeded Response
-
-When a rate limit is exceeded, the API returns a 429 status code:
-
-```json
-{
-  "status": "error",
-  "message": "Too many requests, please try again later",
-  "retryAfter": 3600
-}
-```
-
-The response also includes a `Retry-After` header indicating seconds until the limit resets.
-
-### Implementation Details
-
-- **Algorithm**: Sliding window for accurate rate limiting
-- **Storage**: In-memory with automatic cleanup of expired entries
-- **Exclusions**: Health check endpoints (`/health`) are excluded from rate limiting
-- **Logging**: Rate limit violations are logged with client identifier and endpoint
-
-### Configuration
-
-Rate limits can be adjusted via environment variables (see Rate Limiting Configuration section above). The system validates configuration on startup and logs the active rate limit settings.
-
-### Troubleshooting Rate Limits
-
-**Problem**: Receiving 429 Too Many Requests errors
-
-**Solutions**:
-1. Check the `X-RateLimit-Reset` header to see when your limit resets
-2. Monitor the `X-RateLimit-Remaining` header to track your usage
-3. For partners: Ensure you're using your API key for higher limits
-4. Implement exponential backoff in your client application
-5. Contact support if you need higher rate limits for your use case
-
-**Problem**: Rate limits reset unexpectedly
-
-**Cause**: The in-memory rate limit store resets when the application restarts.
-
-**Solutions**:
-1. This is expected behavior for the current implementation
-2. For production deployments requiring persistent rate limits, consider migrating to Redis-based storage
-3. Monitor application uptime to understand rate limit behavior
 
 ## Development
 
-### Running the Development Server
+### Available Scripts
 
-Start the server with hot-reload enabled:
-
-```bash
-npm run dev
-```
-
-The server will automatically restart when you make changes to TypeScript files.
-
-
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot-reload |
+| `npm run build` | Compile TypeScript to JavaScript |
+| `npm start` | Run compiled production build |
+| `npm run seed` | Seed database with visa type data |
 
 ### Project Structure
 
@@ -395,111 +243,29 @@ backend/
 ├── uploads/                 # Uploaded document storage
 ├── dist/                    # Compiled JavaScript output
 ├── logs/                    # Application logs
-├── .env                     # Environment variables (not in git)
 ├── .env.example             # Environment template
-├── .gitignore               # Git ignore rules
 ├── package.json             # Dependencies and scripts
 ├── tsconfig.json            # TypeScript configuration
-├── server.ts                # Application entry point
-└── README.md                # This file
+└── server.ts                # Application entry point
 ```
-
-### Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with hot-reload |
-| `npm run build` | Compile TypeScript to JavaScript in `dist/` |
-| `npm start` | Run compiled production build |
-| `npm run seed` | Seed database with initial visa type data |
 
 ## Production Deployment
 
-### Building for Production
+For production deployment, see the **[Deployment Guide](docs/DEPLOYMENT.md)** which covers:
+- MongoDB setup (Atlas or self-hosted)
+- PM2 process management
+- Nginx reverse proxy configuration
+- SSL/HTTPS setup
+- Monitoring and logging
+- Backup strategies
+- Security hardening
 
-1. **Compile TypeScript**:
+**Quick Start**:
 ```bash
 npm run build
-```
-
-This creates optimized JavaScript files in the `dist/` directory.
-
-2. **Set Production Environment**:
-```bash
 export NODE_ENV=production
-```
-
-3. **Configure Production Environment Variables**:
-Update your `.env` file with production values:
-- Use production MongoDB URI (consider MongoDB Atlas)
-- Set appropriate CORS origins
-- Enable SMTP for email notifications
-- Use `ai` evaluator type if desired
-- Set `LOG_LEVEL=warn` or `LOG_LEVEL=error`
-
-### Running in Production
-
-#### Option 1: Direct Node.js
-
-```bash
-npm start
-```
-
-#### Option 2: PM2 Process Manager (Recommended)
-
-Install PM2 globally:
-```bash
-npm install -g pm2
-```
-
-Start the application:
-```bash
 pm2 start dist/server.js --name visa-api
 ```
-
-Useful PM2 commands:
-```bash
-pm2 status              # Check status
-pm2 logs visa-api       # View logs
-pm2 restart visa-api    # Restart application
-pm2 stop visa-api       # Stop application
-pm2 startup             # Enable auto-start on system boot
-pm2 save                # Save current process list
-```
-
-#### Option 3: Docker (Alternative)
-
-Create a `Dockerfile`:
-```dockerfile
-FROM node:18-alpine
-WORKDIR /app
-COPY package*.json ./
-RUN npm ci --only=production
-COPY dist ./dist
-COPY uploads ./uploads
-EXPOSE 3000
-CMD ["node", "dist/server.js"]
-```
-
-Build and run:
-```bash
-docker build -t visa-api .
-docker run -p 3000:3000 --env-file .env visa-api
-```
-
-### Production Checklist
-
-- [ ] Set `NODE_ENV=production`
-- [ ] Use production MongoDB URI with authentication
-- [ ] Configure CORS with specific allowed origins
-- [ ] Enable HTTPS/SSL (use reverse proxy like Nginx)
-- [ ] Set up MongoDB backups
-- [ ] Configure log rotation
-- [ ] Set up monitoring (health check endpoint available at `/health`)
-- [ ] Configure rate limiting thresholds for production traffic
-- [ ] Review and secure all environment variables
-- [ ] Test email notifications
-- [ ] Verify file upload limits and storage
 
 ## API Overview
 
@@ -580,116 +346,40 @@ Includes HTML email template and error handling.
 
 ## Troubleshooting
 
-### Common Issues
+### Quick Fixes
 
-#### MongoDB Connection Failed
+| Issue | Solution |
+|-------|----------|
+| MongoDB connection failed | Ensure MongoDB is running, check `MONGODB_URI` in `.env` |
+| Port already in use | Change `PORT` in `.env` or kill process using the port |
+| File upload fails | Check `MAX_FILE_SIZE` and file type restrictions |
+| AI evaluator not working | Set `OPENAI_API_KEY` or enable `USE_MOCK_AI=true` |
+| Email not sending | Verify SMTP credentials, use App Password for Gmail |
 
-**Error**: `MongooseServerSelectionError: connect ECONNREFUSED`
+### Detailed Troubleshooting
 
-**Solutions**:
-- Ensure MongoDB is running: `mongod --version`
-- Check connection string in `.env`
-- Verify MongoDB is listening on the correct port (default: 27017)
-- Check firewall settings
+For comprehensive troubleshooting guides, see:
+- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md#troubleshooting)**: AI and document parsing issues
+- **[Deployment Guide](docs/DEPLOYMENT.md#troubleshooting)**: Production deployment issues
+- **[Security Guide](docs/SECURITY.md)**: Security configuration issues
 
-#### Port Already in Use
+## Documentation
 
-**Error**: `Error: listen EADDRINUSE: address already in use :::3000`
+### Core Guides
+- **[API Documentation](docs/API.md)**: Complete API reference
+- **[Deployment Guide](docs/DEPLOYMENT.md)**: Production setup
+- **[Security Guide](docs/SECURITY.md)**: Security features and best practices
+- **[Architecture Guide](docs/ARCHITECTURE.md)**: System design
 
-**Solutions**:
-- Change `PORT` in `.env` to a different value
-- Kill the process using the port:
-  ```bash
-  # Find process
-  lsof -i :3000  # macOS/Linux
-  netstat -ano | findstr :3000  # Windows
-  
-  # Kill process
-  kill -9 <PID>  # macOS/Linux
-  taskkill /PID <PID> /F  # Windows
-  ```
+### Feature Guides
+- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: AI-powered evaluation
+- **[Partner API Key Guide](docs/PARTNER_API_KEY_GUIDE.md)**: Partner integration
+- **[Mock AI Mode](docs/MOCK_AI_MODE.md)**: Testing without API costs
+- **[Scoring Configuration](docs/SCORING_CONFIGURATION.md)**: Category weights
 
-#### File Upload Fails
-
-**Error**: `MulterError: File too large`
-
-**Solutions**:
-- Check `MAX_FILE_SIZE` in `.env` (default: 5MB)
-- Ensure `uploads/` directory exists and has write permissions
-- Verify file MIME type is allowed
-
-#### AI Evaluator Not Working
-
-**Error**: `OpenAI API key not configured`
-
-**Solutions**:
-- Set `OPENAI_API_KEY` in `.env`
-- Verify API key is valid at [OpenAI Platform](https://platform.openai.com/)
-- Check OpenAI account has available credits
-- Ensure `EVALUATOR_TYPE=ai` in `.env`
-- Try enabling mock mode for testing: `USE_MOCK_AI=true`
-
-#### Document Parsing or AI Issues
-
-For detailed troubleshooting of AI evaluation, document parsing, rate limits, and response issues, see the [AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md#troubleshooting).
-
-#### Email Not Sending
-
-**Error**: `Email send failed`
-
-**Solutions**:
-- Verify `SMTP_ENABLED=true` in `.env`
-- Check SMTP credentials are correct
-- For Gmail, use an App Password instead of regular password
-- Check SMTP server allows connections from your IP
-- Review logs for specific error messages
-
-#### TypeScript Compilation Errors
-
-**Error**: `error TS2307: Cannot find module`
-
-**Solutions**:
-- Run `npm install` to ensure all dependencies are installed
-- Delete `node_modules` and `package-lock.json`, then run `npm install`
-- Check `tsconfig.json` configuration
-- Ensure TypeScript version is 5.3+
-
-### Logging and Debugging
-
-View application logs:
-```bash
-# Development mode (console output)
-npm run dev
-
-# Production mode (check log files)
-tail -f logs/error.log
-tail -f logs/combined.log
-```
-
-Enable debug logging:
-```bash
-# In .env
-LOG_LEVEL=debug
-```
-
-### Getting Help
-
-If you encounter issues not covered here:
-
-1. Check the [Architecture Documentation](docs/ARCHITECTURE.md) for system design details
-2. Review the [API Documentation](docs/API.md) for endpoint specifications
-3. Consult the [Deployment Guide](docs/DEPLOYMENT.md) for production setup
-4. Check application logs for detailed error messages
-
-## Additional Documentation
-
-- **[API Documentation](docs/API.md)**: Detailed endpoint specifications with examples
-- **[Partner API Key Guide](docs/PARTNER_API_KEY_GUIDE.md)**: Step-by-step guide for generating and managing partner API keys
-- **[AI Evaluation Guide](docs/AI_EVALUATION_GUIDE.md)**: Comprehensive guide for AI-powered evaluation with document parsing
-- **[Architecture Guide](docs/ARCHITECTURE.md)**: System design and data flow
-- **[Deployment Guide](docs/DEPLOYMENT.md)**: Production deployment instructions
-- **[Requirements Mapping](docs/REQUIREMENTS_MAPPING.md)**: Traceability matrix
-- **[Future Enhancements](docs/FUTURE_ENHANCEMENTS.md)**: Planned features and improvements
+### Additional Resources
+- **[Documentation Index](docs/README.md)**: Complete documentation overview
+- **[Future Enhancements](docs/FUTURE_ENHANCEMENTS.md)**: Planned features
 
 ---
 
