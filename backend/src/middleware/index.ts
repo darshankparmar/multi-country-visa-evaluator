@@ -4,6 +4,7 @@
  */
 
 export { authenticatePartner, optionalAuthentication } from './auth';
+export { authenticateAdmin, optionalAdminAuth } from './adminAuth';
 export { errorHandler, notFoundHandler, asyncHandler } from './errorHandler';
 export { requestLogger, errorLogger } from './requestLogger';
 export { requestTimeout } from './timeout';

@@ -53,6 +53,7 @@ const envSchema = z.object({
 
   // Security Configuration
   API_KEY_LENGTH: z.string().default('32').transform(Number),
+  ADMIN_API_KEY: z.string().optional(), // Administrator API key for sensitive endpoints
   CORS_ORIGINS: z.string().default('http://localhost:3000').refine(
     (origins) => {
       // In production, ensure no wildcard is present
