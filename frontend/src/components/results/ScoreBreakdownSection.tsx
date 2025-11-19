@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React from 'react'
 import type { ScoreBreakdown } from '../../api/types'
 
 interface ScoreBreakdownSectionProps {
@@ -7,19 +7,14 @@ interface ScoreBreakdownSectionProps {
 
 /**
  * Component to display detailed score breakdown with penalties and criterion contributions
- * Requirements: 18.1, 18.2, 18.3, 18.4, 18.5
  */
 export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
   scoreBreakdown
 }) => {
-  // Subtask 10.1: Implement collapsible section with state
-  const [isExpanded, setIsExpanded] = useState(false)
-
   if (!scoreBreakdown) {
     return null
   }
 
-  // Subtask 10.5: Add score interpretation text
   const getScoreInterpretation = (score: number): { text: string; color: string } => {
     if (score >= 81) {
       return {
@@ -49,7 +44,6 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
     }
   }
 
-  // Subtask 10.3: Use color coding for performance
   const getPerformanceColor = (percentage: number): string => {
     if (percentage >= 80) return 'bg-green-500'
     if (percentage >= 60) return 'bg-blue-500'
@@ -61,31 +55,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
   const interpretation = getScoreInterpretation(scoreBreakdown.adjustedScore)
 
   return (
-    <div className="mt-6 sm:mt-8">
-      {/* Collapsible header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-between w-full text-left hover:bg-gray-50 p-2 rounded transition-colors"
-        aria-expanded={isExpanded}
-        aria-controls="score-breakdown-content"
-      >
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900">
-          Score Breakdown
-        </h2>
-        <svg 
-          className={`w-5 h-5 sm:w-6 sm:h-6 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}
-          fill="none" 
-          stroke="currentColor" 
-          viewBox="0 0 24 24"
-          aria-hidden="true"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      
-      {isExpanded && (
-        <div id="score-breakdown-content" className="mt-4 space-y-4 sm:space-y-6">
-          {/* Subtask 10.2: Implement base score and penalties display */}
+    <div className="space-y-4 sm:space-y-6">
           <div className="bg-gray-50 p-4 sm:p-6 rounded-lg border border-gray-200">
             {/* Base score */}
             <div className="flex justify-between items-center mb-2 pb-2">
@@ -102,7 +72,6 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
               <>
                 <div className="mt-4 mb-2">
                   <p className="text-sm font-semibold text-red-700 mb-3 flex items-center gap-2">
-                    {/* Subtask 10.4: Add penalty warning icons */}
                     <svg 
                       className="w-5 h-5" 
                       fill="currentColor" 
@@ -165,7 +134,6 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
             </div>
           </div>
           
-          {/* Subtask 10.3: Implement criterion contributions display */}
           {scoreBreakdown.breakdown && scoreBreakdown.breakdown.length > 0 && (
             <div>
               <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">
@@ -204,8 +172,6 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
               </div>
             </div>
           )}
-        </div>
-      )}
     </div>
   )
 }

@@ -78,13 +78,19 @@ export async function createEvaluation(
       score: result.score
     });
 
-    // Return created response with evaluation results
+    // Return created response with evaluation results including structured fields
     sendCreated(res, {
       evaluationId: result.evaluationId,
       score: result.score,
       summary: result.summary,
       recommendations: result.evaluation.results?.recommendations,
       conclusion: result.evaluation.results?.conclusion,
+      // Include structured fields if present
+      criteriaAnalysis: result.evaluation.results?.criteriaAnalysis,
+      prioritizedRecommendations: result.evaluation.results?.prioritizedRecommendations,
+      scoreBreakdown: result.evaluation.results?.scoreBreakdown,
+      approvalLikelihood: result.evaluation.results?.approvalLikelihood,
+      validationResults: result.evaluation.results?.validationResults,
       userInfo: {
         name: result.evaluation.userInfo.name,
         email: result.evaluation.userInfo.email
@@ -135,7 +141,7 @@ export async function getEvaluation(
       evaluationId: id
     });
 
-    // Return evaluation data
+    // Return evaluation data with all structured fields
     sendSuccess(res, {
       evaluationId: evaluation.evaluationId,
       userInfo: {
@@ -156,7 +162,13 @@ export async function getEvaluation(
         summary: evaluation.results.summary,
         recommendations: evaluation.results.recommendations,
         conclusion: evaluation.results.conclusion,
-        evaluatedAt: evaluation.results.evaluatedAt
+        evaluatedAt: evaluation.results.evaluatedAt,
+        // Include structured fields if present
+        criteriaAnalysis: evaluation.results.criteriaAnalysis,
+        prioritizedRecommendations: evaluation.results.prioritizedRecommendations,
+        scoreBreakdown: evaluation.results.scoreBreakdown,
+        approvalLikelihood: evaluation.results.approvalLikelihood,
+        validationResults: evaluation.results.validationResults
       } : undefined,
       partnerId: evaluation.partnerId?.toString(),
       createdAt: evaluation.createdAt
@@ -225,7 +237,7 @@ export async function listEvaluations(
       total: result.pagination.total
     });
 
-    // Map evaluations to response format
+    // Map evaluations to response format with all structured fields
     const evaluations = result.data.map(evaluation => ({
       evaluationId: evaluation.evaluationId,
       userInfo: {
@@ -242,7 +254,13 @@ export async function listEvaluations(
         summary: evaluation.results.summary,
         recommendations: evaluation.results.recommendations,
         conclusion: evaluation.results.conclusion,
-        evaluatedAt: evaluation.results.evaluatedAt
+        evaluatedAt: evaluation.results.evaluatedAt,
+        // Include structured fields if present
+        criteriaAnalysis: evaluation.results.criteriaAnalysis,
+        prioritizedRecommendations: evaluation.results.prioritizedRecommendations,
+        scoreBreakdown: evaluation.results.scoreBreakdown,
+        approvalLikelihood: evaluation.results.approvalLikelihood,
+        validationResults: evaluation.results.validationResults
       } : undefined,
       createdAt: evaluation.createdAt
     }));
@@ -260,6 +278,59 @@ export async function listEvaluations(
     logger.error('Failed to list evaluations', {
       requestId: req.requestId,
       partnerId: req.partner?._id?.toString(),
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    next(error);
+  }
+}
+
+/**
+ * Download evaluation report as Markdown
+ * GET /api/evaluations/:id/download
+ * 
+ * Generates and downloads a Markdown report for the evaluation
+ */
+export async function downloadEvaluationPDF(
+  req: Request<{ id: string }>,
+  res: Response,
+  next: NextFunction
+): Promise<void> {
+  try {
+    const { id } = req.params;
+
+    logger.debug('Generating Markdown report for evaluation', {
+      requestId: req.requestId,
+      evaluationId: id
+    });
+
+    // Get evaluation service
+    const evaluationService = getEvaluationService();
+
+    // Fetch evaluation
+    const evaluation = await evaluationService.getEvaluationById(id);
+
+    // Generate Markdown
+    const { MarkdownGenerator } = await import('../services/markdownGenerator');
+    const markdownGenerator = new MarkdownGenerator();
+    const markdownReport = markdownGenerator.generateEvaluationReport(evaluation);
+
+    // Set response headers
+    res.setHeader('Content-Type', 'text/markdown; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="visa-evaluation-${id}.md"`);
+
+    // Send Markdown report
+    res.send(markdownReport);
+
+    logger.info('Markdown report generated and sent', {
+      requestId: req.requestId,
+      evaluationId: id,
+      reportSize: markdownReport.length
+    });
+
+  } catch (error) {
+    logger.error('Failed to generate Markdown report', {
+      requestId: req.requestId,
+      evaluationId: req.params.id,
       error: error instanceof Error ? error.message : 'Unknown error'
     });
     next(error);

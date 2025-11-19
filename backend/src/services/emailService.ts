@@ -1,6 +1,8 @@
 import nodemailer, { Transporter } from 'nodemailer';
 import { logger } from '../config/logger';
 import { getConfig } from '../config/environment';
+import { MarkdownGenerator } from './markdownGenerator';
+import { IEvaluation } from '../types/evaluation.types';
 
 /**
  * Parameters for sending evaluation result emails
@@ -13,6 +15,7 @@ export interface EmailParams {
   evaluationId: string;
   recommendations?: string[];
   conclusion?: string;
+  evaluation?: IEvaluation; // Full evaluation for PDF generation
 }
 
 /**
@@ -22,10 +25,12 @@ export interface EmailParams {
 export class EmailService {
   private transporter: Transporter | null = null;
   private enabled: boolean;
+  private markdownGenerator: MarkdownGenerator;
 
   constructor() {
     const config = getConfig();
     this.enabled = config.SMTP_ENABLED;
+    this.markdownGenerator = new MarkdownGenerator();
 
     // Only initialize transporter if SMTP is enabled
     if (this.enabled) {
@@ -71,7 +76,7 @@ export class EmailService {
   }
 
   /**
-   * Send evaluation results to user via email
+   * Send evaluation results to user via email with PDF attachment
    * Logs errors but does not throw to prevent blocking the evaluation flow
    * 
    * @param params - Email parameters including recipient, score, and summary
@@ -84,26 +89,54 @@ export class EmailService {
       return;
     }
 
-    const { email, name, score, summary, evaluationId, recommendations, conclusion } = params;
+    const { email, name, score, summary, evaluationId, recommendations, conclusion, evaluation } = params;
 
     try {
       const config = getConfig();
-      const fromAddress = config.SMTP_FROM || config.SMTP_USER || 'noreply@visaeval.com';
+      const fromAddress = config.SMTP_FROM || config.SMTP_USER || 'noreply@opensphere.ai';
 
-      const mailOptions = {
-        from: fromAddress,
+      const mailOptions: any = {
+        from: `Visa Evaluator <${fromAddress}>`,
         to: email,
-        subject: 'Your Visa Evaluation Results',
+        subject: 'Your Visa Evaluation Report is Ready',
         html: this.generateEmailTemplate({ name, score, summary, evaluationId, recommendations, conclusion }),
         text: this.generatePlainTextEmail({ name, score, summary, evaluationId, recommendations, conclusion })
       };
+
+      // Generate and attach Markdown report if evaluation is provided
+      if (evaluation) {
+        try {
+          const markdownReport = this.markdownGenerator.generateEvaluationReport(evaluation);
+          
+          // Attach Markdown to email
+          mailOptions.attachments = [
+            {
+              filename: `visa-evaluation-${evaluationId}.md`,
+              content: markdownReport,
+              contentType: 'text/markdown'
+            }
+          ];
+
+          logger.info('Markdown report generated and attached to email', {
+            evaluationId,
+            reportSize: markdownReport.length
+          });
+        } catch (markdownError) {
+          logger.error('Failed to generate Markdown attachment', {
+            error: markdownError instanceof Error ? markdownError.message : 'Unknown error',
+            evaluationId
+          });
+          // Continue sending email without Markdown
+        }
+      }
 
       const info = await this.transporter.sendMail(mailOptions);
 
       logger.info('Evaluation results email sent successfully', {
         email,
         evaluationId,
-        messageId: info.messageId
+        messageId: info.messageId,
+        hasMarkdownAttachment: !!evaluation
       });
     } catch (error) {
       // Log error but don't throw - email is optional functionality
@@ -122,37 +155,7 @@ export class EmailService {
    * @returns HTML string
    * @private
    */
-  private generateEmailTemplate(params: Omit<EmailParams, 'email'>): string {
-    const { name, score, summary, evaluationId, recommendations, conclusion } = params;
-
-    // Determine score color based on value
-    const scoreColor = score >= 70 ? '#10b981' : score >= 50 ? '#f59e0b' : '#ef4444';
-
-    // Generate recommendations HTML if available
-    const recommendationsHtml = recommendations && recommendations.length > 0 ? `
-              <!-- Recommendations -->
-              <div style="margin-bottom: 30px;">
-                <h2 style="margin: 0 0 15px; color: #1f2937; font-size: 20px; font-weight: bold;">
-                  Recommendations
-                </h2>
-                <ul style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
-${recommendations.map(rec => `                  <li style="margin-bottom: 8px;">${rec}</li>`).join('\n')}
-                </ul>
-              </div>
-              ` : '';
-
-    // Generate conclusion HTML if available
-    const conclusionHtml = conclusion ? `
-              <!-- Conclusion -->
-              <div style="margin-bottom: 30px;">
-                <h2 style="margin: 0 0 15px; color: #1f2937; font-size: 20px; font-weight: bold;">
-                  Conclusion
-                </h2>
-                <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
-                  ${conclusion}
-                </p>
-              </div>
-              ` : '';
+  private generateEmailTemplate(_params: Omit<EmailParams, 'email' | 'evaluation'>): string {
 
     return `
 <!DOCTYPE html>
@@ -160,80 +163,93 @@ ${recommendations.map(rec => `                  <li style="margin-bottom: 8px;">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Visa Evaluation Results</title>
+  <title>Visa Evaluation Report</title>
 </head>
-<body style="margin: 0; padding: 0; font-family: Arial, sans-serif; background-color: #f3f4f6;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse;">
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #f3f4f6;">
+  <table role="presentation" style="width: 100%; border-collapse: collapse; background-color: #f3f4f6;">
     <tr>
-      <td style="padding: 40px 0;">
-        <table role="presentation" style="width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 40px 40px 20px; text-align: center; background-color: #1f2937; border-radius: 8px 8px 0 0;">
-              <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: bold;">
-                Visa Evaluation Results
-              </h1>
-            </td>
-          </tr>
+      <td style="padding: 40px 20px;">
+        <table role="presentation" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); overflow: hidden;">
           
-          <!-- Content -->
+          <!-- Header with Brand -->
           <tr>
-            <td style="padding: 40px;">
-              <p style="margin: 0 0 20px; color: #374151; font-size: 16px; line-height: 1.5;">
-                Hello <strong>${name}</strong>,
-              </p>
-              
-              <p style="margin: 0 0 30px; color: #374151; font-size: 16px; line-height: 1.5;">
-                Your visa evaluation has been completed. Here are your results:
-              </p>
-              
-              <!-- Score Box -->
-              <table role="presentation" style="width: 100%; border-collapse: collapse; margin-bottom: 30px;">
+            <td style="padding: 0;">
+              <table role="presentation" style="width: 100%; border-collapse: collapse;">
                 <tr>
-                  <td style="padding: 30px; background-color: #f9fafb; border-radius: 8px; text-align: center;">
-                    <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;">
-                      Evaluation Score
-                    </p>
-                    <p style="margin: 0; color: ${scoreColor}; font-size: 48px; font-weight: bold;">
-                      ${score}/100
-                    </p>
+                  <td style="padding: 40px 40px 30px; text-align: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 32px; font-weight: 700; letter-spacing: -0.5px;">
+                      Visa Evaluator
+                    </h1>
+                    <div style="margin-top: 15px; height: 3px; width: 60px; background-color: #ffffff; margin-left: auto; margin-right: auto; border-radius: 2px;"></div>
                   </td>
                 </tr>
               </table>
+            </td>
+          </tr>
+          
+          <!-- Main Content -->
+          <tr>
+            <td style="padding: 40px;">
               
-              <!-- Summary -->
-              <div style="margin-bottom: 30px;">
-                <h2 style="margin: 0 0 15px; color: #1f2937; font-size: 20px; font-weight: bold;">
-                  Evaluation Summary
-                </h2>
-                <p style="margin: 0; color: #4b5563; font-size: 15px; line-height: 1.6; white-space: pre-wrap;">
-${summary}
-                </p>
-              </div>
-              ${recommendationsHtml}${conclusionHtml}
-              <!-- Evaluation ID -->
-              <div style="padding: 20px; background-color: #f9fafb; border-left: 4px solid #3b82f6; border-radius: 4px; margin-bottom: 30px;">
-                <p style="margin: 0; color: #6b7280; font-size: 13px;">
-                  <strong>Evaluation ID:</strong> ${evaluationId}
-                </p>
-              </div>
-              
-              <!-- Footer Message -->
-              <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.5;">
-                Please keep this evaluation ID for your records. If you have any questions about your results, 
-                please contact us with this reference number.
+              <!-- Greeting -->
+              <p style="margin: 0 0 10px; color: #111827; font-size: 18px; font-weight: 600;">
+                Hi,
               </p>
+              
+              <p style="margin: 0 0 25px; color: #4b5563; font-size: 16px; line-height: 1.6;">
+                Great news! Your visa evaluation report is ready. We've completed a thorough analysis of your profile and prepared detailed insights on your eligibility.
+              </p>
+              
+              <!-- What's Included Box -->
+              <div style="margin: 30px 0; padding: 25px; background-color: #f9fafb; border-radius: 8px; border-left: 4px solid #667eea;">
+                <p style="margin: 0 0 15px; color: #111827; font-size: 16px; font-weight: 600;">
+                  Your evaluation includes:
+                </p>
+                <ul style="margin: 0; padding-left: 20px; color: #4b5563; font-size: 15px; line-height: 1.8;">
+                  <li style="margin-bottom: 8px;">A comprehensive assessment of your eligibility</li>
+                  <li style="margin-bottom: 8px;">Personalized recommendations based on your profile</li>
+                  <li style="margin-bottom: 0;">Clear next steps to guide your immigration journey</li>
+                </ul>
+              </div>
+              
+              <!-- CTA Section -->
+              <p style="margin: 25px 0; color: #4b5563; font-size: 15px; line-height: 1.6;">
+                If you have any questions or need assistance understanding your evaluation, please don't hesitate to reach out. We're here to support you throughout this process.
+              </p>
+              
+              <!-- Disclaimer Box -->
+              <div style="margin: 30px 0 0; padding: 20px; background-color: #fef3c7; border-radius: 8px; border: 1px solid #fbbf24;">
+                <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.6;">
+                  <strong>Note:</strong> We are a technology company that provides visa application assistance. We are not a law firm and do not provide legal advice. For legal counsel, please consult with a licensed immigration attorney.
+                </p>
+              </div>
+              
             </td>
           </tr>
           
           <!-- Footer -->
           <tr>
-            <td style="padding: 30px 40px; background-color: #f9fafb; border-radius: 0 0 8px 8px; text-align: center;">
-              <p style="margin: 0; color: #9ca3af; font-size: 12px;">
-                This is an automated message. Please do not reply to this email.
+            <td style="padding: 30px 40px; background-color: #f9fafb; text-align: center;">
+              <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px; line-height: 1.5;">
+                If you have any questions or need assistance, please don't hesitate to contact us.
               </p>
+              <p style="margin: 15px 0 0; color: #111827; font-size: 15px; font-weight: 600;">
+                Thank you,
+              </p>
+              <p style="margin: 5px 0 20px; color: #667eea; font-size: 16px; font-weight: 700;">
+                Visa Evaluator
+              </p>
+              <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+                <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+                  © 2025 Visa Evaluator. All rights reserved.
+                </p>
+                <p style="margin: 5px 0 0; color: #9ca3af; font-size: 11px;">
+                  Powered by <span style="color: #667eea;">multi-country-visa-evaluator.vercel.app</span>
+                </p>
+              </div>
             </td>
           </tr>
+          
         </table>
       </td>
     </tr>

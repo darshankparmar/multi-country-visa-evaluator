@@ -86,11 +86,7 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
   }
 
   return (
-    <div className="mt-6 sm:mt-8">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
-        Recommendations
-      </h2>
-      <div className="space-y-3">
+    <div className="space-y-3">
         {sortedRecommendations.map((rec, index) => (
           <div 
             key={index}
@@ -116,7 +112,6 @@ export const RecommendationsSection: React.FC<RecommendationsSectionProps> = ({
             </div>
           </div>
         ))}
-      </div>
     </div>
   )
 }

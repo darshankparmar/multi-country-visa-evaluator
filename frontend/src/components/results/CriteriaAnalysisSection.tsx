@@ -8,7 +8,6 @@ interface CriteriaAnalysisSectionProps {
 export const CriteriaAnalysisSection: React.FC<CriteriaAnalysisSectionProps> = ({
   criteriaAnalysis
 }) => {
-  // Subtask 9.2: Implement criterion sorting logic
   // Sort critical requirements first, then by rating (CRITICAL_GAP → WEAK → MODERATE → GOOD → STRONG)
   const sortedCriteria = useMemo(() => {
     const ratingOrder: Record<CriterionRating, number> = {
@@ -29,7 +28,6 @@ export const CriteriaAnalysisSection: React.FC<CriteriaAnalysisSectionProps> = (
     })
   }, [criteriaAnalysis])
 
-  // Subtask 9.3: Implement rating badge styling
   const getRatingColor = (rating: CriterionRating): string => {
     switch (rating) {
       case 'STRONG':
@@ -50,13 +48,7 @@ export const CriteriaAnalysisSection: React.FC<CriteriaAnalysisSectionProps> = (
   }
 
   return (
-    <div className="mt-6 sm:mt-8">
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
-        Criteria Analysis
-      </h2>
-      
-      {/* Subtask 9.4: Implement criterion card display */}
-      <div className="space-y-4">
+    <div className="space-y-4">
         {sortedCriteria.map((criterion, index) => (
           <div 
             key={index}
@@ -122,7 +114,6 @@ export const CriteriaAnalysisSection: React.FC<CriteriaAnalysisSectionProps> = (
             </div>
           </div>
         ))}
-      </div>
     </div>
   )
 }
