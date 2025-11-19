@@ -22,7 +22,13 @@ const envSchema = z.object({
     z.number().min(0).max(100)
   ),
   EVALUATOR_TYPE: z.enum(['rule-based', 'ai']).default('rule-based'),
-  REQUEST_TIMEOUT_MS: z.string().default('30000').transform(Number), // 30 seconds default
+  
+  // Timeout Configuration (in milliseconds)
+  // Hierarchy: REQUEST_TIMEOUT_MS should be >= AI_API_TIMEOUT_MS + buffer
+  REQUEST_TIMEOUT_MS: z.string().default('120000').transform(Number), // 2 minutes - overall request timeout
+  DB_QUERY_TIMEOUT_MS: z.string().default('10000').transform(Number), // 10 seconds - database operations
+  AI_API_TIMEOUT_MS: z.string().default('60000').transform(Number), // 60 seconds - AI API calls
+  FILE_UPLOAD_TIMEOUT_MS: z.string().default('120000').transform(Number), // 2 minutes - file uploads
 
   // AI Service Configuration (conditional based on EVALUATOR_TYPE)
   OPENAI_API_KEY: z.string().optional(),
@@ -82,6 +88,18 @@ const envSchema = z.object({
   {
     message: 'OPENAI_API_KEY is required when EVALUATOR_TYPE is set to "ai"',
     path: ['OPENAI_API_KEY']
+  }
+).refine(
+  (data) => data.REQUEST_TIMEOUT_MS >= data.AI_API_TIMEOUT_MS,
+  {
+    message: 'REQUEST_TIMEOUT_MS must be greater than or equal to AI_API_TIMEOUT_MS to prevent premature timeouts',
+    path: ['REQUEST_TIMEOUT_MS']
+  }
+).refine(
+  (data) => data.REQUEST_TIMEOUT_MS >= data.DB_QUERY_TIMEOUT_MS,
+  {
+    message: 'REQUEST_TIMEOUT_MS must be greater than or equal to DB_QUERY_TIMEOUT_MS',
+    path: ['REQUEST_TIMEOUT_MS']
   }
 );
 

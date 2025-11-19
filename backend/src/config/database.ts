@@ -6,12 +6,22 @@ import { getConfig } from './environment';
  * MongoDB connection options
  * Configures connection pooling, timeouts, and other connection parameters
  */
-const connectionOptions: mongoose.ConnectOptions = {
-  maxPoolSize: 10,
-  minPoolSize: 2,
-  socketTimeoutMS: 45000,
-  serverSelectionTimeoutMS: 5000,
-  family: 4 // Use IPv4, skip trying IPv6
+const getConnectionOptions = (): mongoose.ConnectOptions => {
+  const config = getConfig();
+  
+  return {
+    maxPoolSize: config.NODE_ENV === 'production' ? 50 : 10,
+    minPoolSize: config.NODE_ENV === 'production' ? 10 : 2,
+    socketTimeoutMS: 45000, // Socket timeout for operations
+    serverSelectionTimeoutMS: 5000, // Timeout for selecting a server
+    connectTimeoutMS: 10000, // Timeout for initial connection
+    heartbeatFrequencyMS: 10000, // How often to check server health
+    maxIdleTimeMS: 30000, // Close idle connections after 30s
+    family: 4, // Use IPv4, skip trying IPv6
+    retryWrites: true, // Retry failed writes
+    retryReads: true, // Retry failed reads
+    compressors: ['zlib'] // Enable compression
+  };
 };
 
 /**
@@ -43,7 +53,7 @@ export async function connectDatabase(retryCount: number = 0): Promise<void> {
       maxRetries: MAX_RETRIES
     });
 
-    await mongoose.connect(mongoUri, connectionOptions);
+    await mongoose.connect(mongoUri, getConnectionOptions());
 
     logger.info('Successfully connected to MongoDB', {
       host: mongoose.connection.host,

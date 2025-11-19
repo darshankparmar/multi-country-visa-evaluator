@@ -49,10 +49,16 @@ const evaluationRateLimiter = (req: Request, res: Response, next: NextFunction) 
  * 
  * - Accepts multipart/form-data with documents
  * - Validates request body and file uploads
- * - 30-second timeout for processing
+ * - 2-minute timeout for processing (includes file upload, parsing, AI evaluation)
  * - Optional partner authentication (if x-api-key provided)
  * - If authenticated, evaluation is associated with the partner
  * - Rate limited: 10/hour for unauthenticated, 50/hour for partners
+ * 
+ * Timeout breakdown:
+ * - Overall request: 120s (REQUEST_TIMEOUT_MS)
+ * - AI API call: 60s (AI_API_TIMEOUT_MS)
+ * - Document parsing: 30s (PARSING_TIMEOUT)
+ * - Database operations: 10s (DB_QUERY_TIMEOUT_MS)
  * 
  * Note: Using middleware wrapper to support hot-reload in development
  */
