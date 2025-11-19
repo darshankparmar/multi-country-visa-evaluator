@@ -4,6 +4,7 @@ import { getConfig } from './config/environment';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeRateLimiters, generalApiLimiter } from './config/rateLimits';
+import { configureSecurityHeaders, additionalSecurityHeaders } from './middleware/securityHeaders';
 import { logger } from './config/logger';
 import routes from './routes/index';
 
@@ -117,6 +118,10 @@ export function createApp(): Application {
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
     maxAge: 86400 // 24 hours - cache preflight requests
   };
+
+  // Apply security headers (must be early in middleware chain)
+  app.use(configureSecurityHeaders());
+  app.use(additionalSecurityHeaders);
 
   app.use(cors(corsOptions));
 
