@@ -39,6 +39,7 @@ export function errorHandler(
       res,
       err.message,
       err.statusCode,
+      err.name.toUpperCase().replace(/\s+/g, '_'),
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -51,10 +52,16 @@ export function errorHandler(
       message: error.message
     }));
 
+    logger.warn('Validation error', {
+      requestId: req.requestId,
+      errors
+    });
+
     return sendError(
       res,
-      'Validation failed',
+      'Request validation failed',
       400,
+      'VALIDATION_ERROR',
       errors,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -67,10 +74,16 @@ export function errorHandler(
       message: error.message
     }));
 
+    logger.warn('Database validation error', {
+      requestId: req.requestId,
+      errors
+    });
+
     return sendError(
       res,
-      'Database validation failed',
+      'Data validation failed',
       400,
+      'DATABASE_VALIDATION_ERROR',
       errors,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -78,10 +91,17 @@ export function errorHandler(
 
   // Handle Mongoose cast errors (invalid ObjectId, etc.)
   if (err instanceof mongoose.Error.CastError) {
+    logger.warn('Database cast error', {
+      requestId: req.requestId,
+      path: err.path,
+      value: err.value
+    });
+
     return sendError(
       res,
       `Invalid ${err.path}: ${err.value}`,
       400,
+      'INVALID_ID_FORMAT',
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -90,10 +110,17 @@ export function errorHandler(
   // Handle Mongoose duplicate key errors
   if (err.name === 'MongoServerError' && (err as any).code === 11000) {
     const field = Object.keys((err as any).keyPattern || {})[0] || 'field';
+    
+    logger.warn('Duplicate key error', {
+      requestId: req.requestId,
+      field
+    });
+
     return sendError(
       res,
       `Duplicate value for ${field}. This ${field} already exists.`,
       409,
+      'DUPLICATE_ENTRY',
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -101,20 +128,30 @@ export function errorHandler(
 
   // Handle JWT errors (if using JWT in the future)
   if (err.name === 'JsonWebTokenError') {
+    logger.warn('JWT validation error', {
+      requestId: req.requestId
+    });
+
     return sendError(
       res,
-      'Invalid token',
+      'Invalid authentication token',
       401,
+      'INVALID_TOKEN',
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
   }
 
   if (err.name === 'TokenExpiredError') {
+    logger.warn('JWT expiration error', {
+      requestId: req.requestId
+    });
+
     return sendError(
       res,
-      'Token expired',
+      'Authentication token has expired',
       401,
+      'TOKEN_EXPIRED',
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -124,25 +161,36 @@ export function errorHandler(
   if (err.name === 'MulterError') {
     const multerErr = err as any;
     let message = 'File upload error';
+    let code = 'FILE_UPLOAD_ERROR';
 
     switch (multerErr.code) {
       case 'LIMIT_FILE_SIZE':
         message = 'File size exceeds the maximum allowed limit';
+        code = 'FILE_TOO_LARGE';
         break;
       case 'LIMIT_FILE_COUNT':
         message = 'Too many files uploaded';
+        code = 'TOO_MANY_FILES';
         break;
       case 'LIMIT_UNEXPECTED_FILE':
         message = 'Unexpected field in file upload';
+        code = 'UNEXPECTED_FILE_FIELD';
         break;
       default:
         message = multerErr.message || 'File upload error';
     }
 
+    logger.warn('File upload error', {
+      requestId: req.requestId,
+      code: multerErr.code,
+      message
+    });
+
     return sendError(
       res,
       message,
       400,
+      code,
       undefined,
       process.env.NODE_ENV === 'development' ? err.stack : undefined
     );
@@ -153,18 +201,23 @@ export function errorHandler(
     requestId: req.requestId,
     error: err.message,
     stack: err.stack,
-    name: err.name
+    name: err.name,
+    method: req.method,
+    path: req.path,
+    ip: req.ip,
+    userAgent: req.headers['user-agent']
   });
 
   // Don't expose internal error details in production
   const message = process.env.NODE_ENV === 'production'
-    ? 'Internal server error'
+    ? 'An unexpected error occurred. Please try again later.'
     : err.message || 'Internal server error';
 
   return sendError(
     res,
     message,
     500,
+    'INTERNAL_SERVER_ERROR',
     undefined,
     process.env.NODE_ENV === 'development' ? err.stack : undefined
   );
@@ -182,13 +235,16 @@ export function notFoundHandler(req: Request, res: Response): void {
     requestId: req.requestId,
     method: req.method,
     path: req.path,
-    url: req.url
+    url: req.url,
+    ip: req.ip,
+    userAgent: req.headers['user-agent']
   });
 
   sendError(
     res,
-    `Cannot ${req.method} ${req.path}`,
-    404
+    `Route not found: ${req.method} ${req.path}`,
+    404,
+    'ROUTE_NOT_FOUND'
   );
 }
 

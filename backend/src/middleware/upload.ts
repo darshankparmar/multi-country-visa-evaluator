@@ -2,6 +2,7 @@ import multer from 'multer';
 import { Request } from 'express';
 import { getConfig } from '../config/environment';
 import { ValidationError } from '../utils/errors';
+import { UPLOAD_LIMITS } from '../constants';
 
 /**
  * Allowed MIME types for document uploads
@@ -50,7 +51,7 @@ const upload = multer({
     get fileSize() {
       return getConfig().MAX_FILE_SIZE;
     },
-    files: 10 // Maximum 10 files per request
+    files: UPLOAD_LIMITS.MAX_FILES_PER_REQUEST
   },
   fileFilter
 });
@@ -59,7 +60,7 @@ const upload = multer({
  * Middleware for uploading multiple documents
  * Accepts up to 10 files with field name 'documents'
  */
-export const uploadDocuments = upload.array('documents', 10);
+export const uploadDocuments = upload.array('documents', UPLOAD_LIMITS.MAX_FILES_PER_REQUEST);
 
 /**
  * Middleware for uploading a single document

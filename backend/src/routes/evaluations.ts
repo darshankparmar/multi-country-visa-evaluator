@@ -14,12 +14,12 @@ import {
   listEvaluationsQuerySchema,
   validateFileUpload
 } from '../middleware/validation';
-import { requestTimeout } from '../middleware/timeout';
-import { getConfig } from '../config/environment';
 import {
   evaluationLimiter,
   partnerApiLimiter,
-  partnerEvaluationLimiter
+  partnerEvaluationLimiter,
+  publicReadLimiter,
+  downloadLimiter
 } from '../config/rateLimits';
 
 const router = Router();
@@ -47,16 +47,19 @@ const evaluationRateLimiter = (req: Request, res: Response, next: NextFunction) 
  * 
  * - Accepts multipart/form-data with documents
  * - Validates request body and file uploads
- * - 30-second timeout for processing
+ * - Global timeout applied (120s REQUEST_TIMEOUT_MS)
  * - Optional partner authentication (if x-api-key provided)
  * - If authenticated, evaluation is associated with the partner
  * - Rate limited: 10/hour for unauthenticated, 50/hour for partners
  * 
- * Note: Using middleware wrapper to support hot-reload in development
+ * Timeout breakdown:
+ * - Overall request: 120s (REQUEST_TIMEOUT_MS) - applied globally
+ * - AI API call: 60s (AI_API_TIMEOUT_MS)
+ * - Document parsing: 30s (PARSING_TIMEOUT)
+ * - Database operations: 10s (DB_QUERY_TIMEOUT_MS)
  */
 router.post(
   '/',
-  (req, res, next) => requestTimeout(getConfig().REQUEST_TIMEOUT_MS)(req, res, next),
   optionalAuthentication, // Optional partner authentication (must run before rate limiter)
   evaluationRateLimiter, // Apply conditional rate limiting
   uploadDocuments, // Handle file uploads
@@ -71,9 +74,11 @@ router.post(
  * 
  * - Generates and downloads Markdown report
  * - No authentication required (public access by ID)
+ * - Rate limited: 20 downloads per 15 minutes per IP
  */
 router.get(
   '/:id/download',
+  downloadLimiter, // Apply download rate limiter
   validateRequest(evaluationIdParamSchema, 'params'), // Validate UUID format
   downloadEvaluationPDF
 );
@@ -84,9 +89,11 @@ router.get(
  * 
  * - Returns complete evaluation details
  * - No authentication required (public access by ID)
+ * - Rate limited: 200 requests per 15 minutes per IP
  */
 router.get(
   '/:id',
+  publicReadLimiter, // Apply public read rate limiter
   validateRequest(evaluationIdParamSchema, 'params'), // Validate UUID format
   getEvaluation
 );

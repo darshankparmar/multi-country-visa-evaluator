@@ -1,6 +1,8 @@
 import { Evaluation } from '../models/Evaluation';
 import { IEvaluation } from '../types/evaluation.types';
 import mongoose from 'mongoose';
+import { sanitizeEmail, sanitizeCountry } from '../utils/sanitization';
+import { logger } from '../config/logger';
 
 /**
  * Pagination options for list queries
@@ -200,27 +202,53 @@ export class EvaluationRepository {
       sortOrder = 'desc'
     } = options;
 
-    // Build query filter
+    // Build query filter with sanitization to prevent NoSQL injection
     const query: any = {};
 
     if (filters.partnerId) {
-      query.partnerId = filters.partnerId;
+      // Validate partnerId is a valid ObjectId
+      try {
+        query.partnerId = new mongoose.Types.ObjectId(filters.partnerId.toString());
+      } catch (error) {
+        logger.warn('Invalid partnerId format', { partnerId: filters.partnerId });
+        throw new Error('Invalid partnerId format');
+      }
     }
 
     if (filters.email) {
-      query['userInfo.email'] = filters.email.toLowerCase();
+      // Sanitize email to prevent injection
+      try {
+        query['userInfo.email'] = sanitizeEmail(filters.email);
+      } catch (error) {
+        logger.warn('Invalid email format in filter', { email: filters.email });
+        throw new Error('Invalid email format');
+      }
     }
 
     if (filters.country) {
-      query['visaApplication.country'] = filters.country;
+      // Sanitize country to prevent injection
+      try {
+        query['visaApplication.country'] = sanitizeCountry(filters.country);
+      } catch (error) {
+        logger.warn('Invalid country format in filter', { country: filters.country });
+        throw new Error('Invalid country format');
+      }
     }
 
     if (filters.startDate || filters.endDate) {
       query.createdAt = {};
       if (filters.startDate) {
+        // Ensure startDate is a valid Date object
+        if (!(filters.startDate instanceof Date) || isNaN(filters.startDate.getTime())) {
+          throw new Error('Invalid startDate format');
+        }
         query.createdAt.$gte = filters.startDate;
       }
       if (filters.endDate) {
+        // Ensure endDate is a valid Date object
+        if (!(filters.endDate instanceof Date) || isNaN(filters.endDate.getTime())) {
+          throw new Error('Invalid endDate format');
+        }
         query.createdAt.$lte = filters.endDate;
       }
     }

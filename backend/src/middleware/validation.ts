@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { z, ZodError, ZodSchema } from 'zod';
 import { ValidationError } from '../utils/errors';
 import { logger } from '../config/logger';
+import { validateEmailAddress } from '../utils/emailValidator';
 
 /**
  * Validation middleware factory
@@ -63,18 +64,36 @@ export const createEvaluationSchema = z.object({
   name: z.string()
     .min(1, 'Name is required')
     .max(100, 'Name must be less than 100 characters')
-    .trim(),
+    .trim()
+    .regex(/^[a-zA-Z\s'-]+$/, 'Name contains invalid characters')
+    .refine((name) => {
+      // Additional check for control characters (defense in depth)
+      return !name.includes('\n') && !name.includes('\r') && !name.includes('\0');
+    }, {
+      message: 'Name contains invalid control characters'
+    }),
   
   email: z.string()
     .min(1, 'Email is required')
-    .email('Invalid email format')
+    .max(254, 'Email address is too long')
     .toLowerCase()
-    .trim(),
+    .trim()
+    .refine((email) => {
+      try {
+        validateEmailAddress(email);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }, {
+      message: 'Invalid email address format or contains unsafe characters'
+    }),
   
   country: z.string()
     .min(1, 'Country is required')
     .max(100, 'Country must be less than 100 characters')
-    .trim(),
+    .trim()
+    .regex(/^[a-zA-Z\s]+$/, 'Country contains invalid characters'),
   
   visaType: z.string()
     .min(1, 'Visa type is required')
@@ -94,9 +113,19 @@ export const createPartnerSchema = z.object({
   
   email: z.string()
     .min(1, 'Email is required')
-    .email('Invalid email format')
+    .max(254, 'Email address is too long')
     .toLowerCase()
-    .trim(),
+    .trim()
+    .refine((email) => {
+      try {
+        validateEmailAddress(email);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }, {
+      message: 'Invalid email address format or contains unsafe characters'
+    }),
   
   contactInfo: z.object({
     phone: z.string()
@@ -154,9 +183,20 @@ export const listEvaluationsQuerySchema = z.object({
     .transform(val => val?.trim()),
   
   email: z.string()
-    .email('Invalid email format')
+    .max(254, 'Email address is too long')
     .optional()
     .transform(val => val?.toLowerCase().trim())
+    .refine((email) => {
+      if (!email) return true; // Optional field
+      try {
+        validateEmailAddress(email);
+        return true;
+      } catch (error) {
+        return false;
+      }
+    }, {
+      message: 'Invalid email address format or contains unsafe characters'
+    })
 });
 
 /**

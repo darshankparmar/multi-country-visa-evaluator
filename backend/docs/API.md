@@ -41,8 +41,11 @@ The Visa Evaluation Backend API provides RESTful endpoints for submitting visa e
 | 201 | Created - Resource created successfully |
 | 400 | Bad Request - Invalid input or validation error |
 | 401 | Unauthorized - Missing or invalid API key |
+| 403 | Forbidden - Insufficient permissions |
 | 404 | Not Found - Resource not found |
-| 408 | Request Timeout - Request exceeded 30 second limit |
+| 408 | Request Timeout - Request exceeded timeout limit |
+| 413 | Payload Too Large - Request body or file too large |
+| 429 | Too Many Requests - Rate limit exceeded |
 | 500 | Internal Server Error - Server error occurred |
 
 ## Authentication
@@ -63,6 +66,22 @@ curl -H "x-api-key: abc123def456..." \
 ### Obtaining an API Key
 
 Contact the system administrator to create a partner account. API keys are generated using cryptographically secure random bytes.
+
+### Admin Authentication
+
+Some sensitive endpoints (like detailed health checks and metrics) require admin authentication via the `x-admin-key` header.
+
+**Header Format**:
+```
+x-admin-key: your-admin-api-key-here
+```
+
+**Generating Admin Key**:
+```bash
+openssl rand -hex 32
+```
+
+Set the generated key in your `.env` file as `ADMIN_API_KEY`. Leave empty to disable admin-only endpoints.
 
 ## Endpoints
 
@@ -934,21 +953,90 @@ List endpoints support pagination with the following parameters:
 
 ---
 
+## Security Features
+
+### Input Validation
+
+All API endpoints implement strict input validation:
+
+- **NoSQL Injection Prevention**: All MongoDB queries are sanitized
+- **Email Validation**: RFC 5322 compliant with security checks
+- **File Type Validation**: MIME type and magic number validation
+- **Schema Validation**: Zod-based type-safe validation
+
+### Security Headers
+
+All responses include security headers:
+
+```http
+X-Frame-Options: SAMEORIGIN
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+Strict-Transport-Security: max-age=31536000; includeSubDomains
+Content-Security-Policy: default-src 'self'
+```
+
+### Timeout Protection
+
+Requests are protected by multiple timeout layers:
+
+- **Overall Request**: 120 seconds (configurable via REQUEST_TIMEOUT_MS)
+- **AI API Calls**: 60 seconds (configurable via AI_API_TIMEOUT_MS)
+- **Document Parsing**: 30 seconds (configurable via PARSING_TIMEOUT)
+- **Database Queries**: 10 seconds (configurable via DB_QUERY_TIMEOUT_MS)
+- **File Uploads**: 120 seconds (configurable via FILE_UPLOAD_TIMEOUT_MS)
+
+### CORS Protection
+
+CORS is strictly enforced:
+
+- **Development**: Can use wildcard (`*`) or specific origins
+- **Production**: MUST specify exact origins (wildcard not allowed)
+- Configurable via `CORS_ORIGINS` environment variable
+
 ## Rate Limiting
 
-**Current Status**: Not implemented
+**Status**: Implemented
 
-**Future Implementation**: Rate limiting will be added to prevent abuse:
-- 100 requests per 15 minutes per IP address
-- 1000 requests per hour per API key
-- Evaluation endpoint: 10 submissions per hour per email
+The API implements comprehensive rate limiting to prevent abuse:
 
-Rate limit headers will be included in responses:
-```
+### Rate Limit Tiers
+
+| Endpoint Type | Limit | Window | Identifier |
+|--------------|-------|--------|------------|
+| General API | 100 requests | 15 minutes | IP address |
+| Evaluation submissions | 10 submissions | 1 hour | IP address |
+| Public read (visa types, details) | 200 requests | 15 minutes | IP address |
+| Download requests | 20 requests | 15 minutes | IP address |
+| Partner API | 1000 requests | 1 hour | API key |
+| Partner evaluations | 50 submissions | 1 hour | API key |
+
+### Rate Limit Headers
+
+Rate limit headers are included in all responses:
+```http
 X-RateLimit-Limit: 100
 X-RateLimit-Remaining: 95
-X-RateLimit-Reset: 1700221500
+X-RateLimit-Reset: 2025-11-18T15:30:00.000Z
 ```
+
+### Rate Limit Exceeded
+
+When rate limit is exceeded, the API returns 429 status:
+
+```json
+{
+  "status": "error",
+  "message": "Too many requests, please try again later",
+  "retryAfter": 3600
+}
+```
+
+The response also includes a `Retry-After` header indicating seconds until reset.
+
+### Exclusions
+
+Health check endpoints (`/health`) are automatically excluded from rate limiting.
 
 ---
 
@@ -1004,15 +1092,24 @@ Occur when requested resource doesn't exist.
 
 #### Timeout Errors (408)
 
-Occur when request processing exceeds 30 seconds (evaluation endpoints only).
+Occur when request processing exceeds configured timeout limits.
 
 **Example**:
 ```json
 {
   "status": "error",
-  "message": "Request timeout - evaluation processing took too long"
+  "message": "Request timeout - processing took too long"
 }
 ```
+
+**Timeout Configuration**:
+- Overall request: 120 seconds (default)
+- AI API calls: 60 seconds (default)
+- Document parsing: 30 seconds (default)
+- Database queries: 10 seconds (default)
+- File uploads: 120 seconds (default)
+
+All timeouts are configurable via environment variables.
 
 #### Server Errors (500)
 

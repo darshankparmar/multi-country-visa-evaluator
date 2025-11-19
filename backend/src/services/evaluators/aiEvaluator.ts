@@ -749,7 +749,10 @@ Ensure all category names match exactly the categories listed above.`;
         };
       }
     } catch (error) {
-      logger.warn('Failed to parse structured response, falling back to text parsing', { error });
+      logger.warn('Failed to parse structured response, falling back to text parsing', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
     }
 
     // Fallback to text parsing if JSON parsing fails
@@ -1105,28 +1108,46 @@ ${validationResults.map(r => `- **${r.criterion}**: ${r.met ? '✓ MET' : '✗ N
 
 
   /**
-   * Call OpenAI API with retry logic and exponential backoff
+   * Call OpenAI API with retry logic, exponential backoff, and timeout
    * Retries based on AI_RETRY_ATTEMPTS configuration
+   * Supports abort signal for request cancellation
    */
-  private async callOpenAIWithRetry(messages: any[]): Promise<OpenAI.Chat.Completions.ChatCompletion> {
+  private async callOpenAIWithRetry(messages: any[], signal?: AbortSignal): Promise<OpenAI.Chat.Completions.ChatCompletion> {
     if (!this.openai) {
       throw new Error('OpenAI client not initialized - mock mode should be handled before calling this method');
     }
     
     const config = getConfig();
     const maxRetries = config.AI_RETRY_ATTEMPTS;
+    const apiTimeout = config.AI_API_TIMEOUT_MS;
     let lastError: Error | null = null;
     
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Check if request was aborted
+      if (signal?.aborted) {
+        throw new Error('Request aborted due to timeout');
+      }
+
       try {
         const callStartTime = Date.now();
         
-        const response = await this.openai.chat.completions.create({
+        // Create timeout promise
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => {
+            reject(new Error(`OpenAI API call timeout after ${apiTimeout}ms`));
+          }, apiTimeout);
+        });
+
+        // Create API call promise
+        const apiPromise = this.openai.chat.completions.create({
           model: this.model,
           messages,
           temperature: config.AI_TEMPERATURE,
           max_tokens: config.AI_MAX_TOKENS
         });
+
+        // Race between API call and timeout
+        const response = await Promise.race([apiPromise, timeoutPromise]);
         
         const callDuration = Date.now() - callStartTime;
         
@@ -1141,10 +1162,20 @@ ${validationResults.map(r => `- **${r.criterion}**: ${r.met ? '✓ MET' : '✗ N
         return response;
       } catch (error) {
         lastError = error as Error;
+        
+        // Check if it's a timeout error
+        const isTimeout = error instanceof Error && error.message.includes('timeout');
+        
         logger.warn(`OpenAI API call failed (attempt ${attempt + 1}/${maxRetries + 1})`, { 
           error: error instanceof Error ? error.message : 'Unknown error',
-          errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+          errorType: error instanceof Error ? error.constructor.name : 'Unknown',
+          isTimeout
         });
+        
+        // Don't retry on abort signal
+        if (signal?.aborted) {
+          throw new Error('Request aborted due to timeout');
+        }
         
         if (attempt < maxRetries) {
           // Exponential backoff: 1s, 2s

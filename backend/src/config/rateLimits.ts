@@ -27,6 +27,8 @@ let _generalApiLimiter: ReturnType<typeof createRateLimiter> | null = null;
 let _evaluationLimiter: ReturnType<typeof createRateLimiter> | null = null;
 let _partnerApiLimiter: ReturnType<typeof createRateLimiter> | null = null;
 let _partnerEvaluationLimiter: ReturnType<typeof createRateLimiter> | null = null;
+let _publicReadLimiter: ReturnType<typeof createRateLimiter> | null = null;
+let _downloadLimiter: ReturnType<typeof createRateLimiter> | null = null;
 
 /**
  * Initialize rate limiters with configuration from environment
@@ -76,6 +78,20 @@ export function initializeRateLimiters() {
     message: 'Too many evaluation requests for this API key, please try again later'
   });
 
+  _publicReadLimiter = createRateLimiter({
+    windowMs: config.RATE_LIMIT_PUBLIC_READ_WINDOW_MS,
+    max: config.RATE_LIMIT_PUBLIC_READ_MAX,
+    keyGenerator: (req: Request) => `public-read:${getClientIp(req)}`,
+    message: 'Too many requests from this IP, please try again later'
+  });
+
+  _downloadLimiter = createRateLimiter({
+    windowMs: config.RATE_LIMIT_DOWNLOAD_WINDOW_MS,
+    max: config.RATE_LIMIT_DOWNLOAD_MAX,
+    keyGenerator: (req: Request) => `download:${getClientIp(req)}`,
+    message: 'Too many download requests from this IP, please try again later'
+  });
+
   // Log rate limit configuration on startup with detailed information
   logger.info('Rate limit configuration initialized', {
     generalApi: {
@@ -101,6 +117,18 @@ export function initializeRateLimiters() {
       windowMs: config.RATE_LIMIT_PARTNER_EVAL_WINDOW_MS,
       windowHours: config.RATE_LIMIT_PARTNER_EVAL_WINDOW_MS / 3600000,
       description: 'API key-based rate limit for partner evaluation submissions'
+    },
+    publicRead: {
+      max: config.RATE_LIMIT_PUBLIC_READ_MAX,
+      windowMs: config.RATE_LIMIT_PUBLIC_READ_WINDOW_MS,
+      windowMinutes: config.RATE_LIMIT_PUBLIC_READ_WINDOW_MS / 60000,
+      description: 'IP-based rate limit for public read endpoints (visa types, evaluation details)'
+    },
+    download: {
+      max: config.RATE_LIMIT_DOWNLOAD_MAX,
+      windowMs: config.RATE_LIMIT_DOWNLOAD_WINDOW_MS,
+      windowMinutes: config.RATE_LIMIT_DOWNLOAD_WINDOW_MS / 60000,
+      description: 'IP-based rate limit for evaluation report downloads'
     },
     timestamp: new Date().toISOString()
   });
@@ -154,4 +182,28 @@ export const partnerEvaluationLimiter: ReturnType<typeof createRateLimiter> = (r
     throw new Error('Rate limiters not initialized. Call initializeRateLimiters() first.');
   }
   return _partnerEvaluationLimiter(req, res, next);
+};
+
+/**
+ * Public read endpoint rate limiter (IP-based)
+ * Applied to public GET endpoints like visa types and evaluation details
+ * Default: 200 requests per 15 minutes per IP
+ */
+export const publicReadLimiter: ReturnType<typeof createRateLimiter> = (req, res, next) => {
+  if (!_publicReadLimiter) {
+    throw new Error('Rate limiters not initialized. Call initializeRateLimiters() first.');
+  }
+  return _publicReadLimiter(req, res, next);
+};
+
+/**
+ * Download rate limiter (IP-based)
+ * Applied to evaluation report download endpoints
+ * Default: 20 downloads per 15 minutes per IP
+ */
+export const downloadLimiter: ReturnType<typeof createRateLimiter> = (req, res, next) => {
+  if (!_downloadLimiter) {
+    throw new Error('Rate limiters not initialized. Call initializeRateLimiters() first.');
+  }
+  return _downloadLimiter(req, res, next);
 };

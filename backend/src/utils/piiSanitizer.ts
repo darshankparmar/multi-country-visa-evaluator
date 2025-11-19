@@ -15,10 +15,16 @@ export function sanitizePII(text: string): string {
 
   let sanitized = text;
 
-  // Remove email addresses
+  // Remove email addresses - show only first 2 chars and domain
   sanitized = sanitized.replace(
-    /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    '[EMAIL]'
+    /\b([A-Za-z0-9._%+-]{1,2})[A-Za-z0-9._%+-]*@([A-Za-z0-9.-]+\.[A-Z|a-z]{2,})\b/g,
+    (_match, prefix, domain) => `${prefix}***@${domain}`
+  );
+
+  // Remove full names (First Last pattern)
+  sanitized = sanitized.replace(
+    /\b([A-Z][a-z]+)\s+([A-Z][a-z]+)\b/g,
+    (_match, first, last) => `${first.charAt(0)}*** ${last.charAt(0)}***`
   );
 
   // Remove US Social Security Numbers (XXX-XX-XXXX)
@@ -67,7 +73,45 @@ export function sanitizePII(text: string): string {
     '[ZIP]'
   );
 
+  // Remove API keys and tokens (common patterns)
+  sanitized = sanitized.replace(
+    /\b(sk|pk|api|token)[-_][a-zA-Z0-9]{20,}\b/gi,
+    '[API_KEY]'
+  );
+
   return sanitized;
+}
+
+/**
+ * Sanitize email for logging - show only first 2 chars and domain
+ * @param email Email address to sanitize
+ * @returns Sanitized email
+ */
+export function sanitizeEmail(email: string): string {
+  if (!email || typeof email !== 'string') {
+    return '[INVALID_EMAIL]';
+  }
+  
+  const match = email.match(/^([^@]{1,2})[^@]*@(.+)$/);
+  if (match) {
+    return `${match[1]}***@${match[2]}`;
+  }
+  
+  return '[EMAIL]';
+}
+
+/**
+ * Sanitize name for logging - show only first letter
+ * @param name Name to sanitize
+ * @returns Sanitized name
+ */
+export function sanitizeName(name: string): string {
+  if (!name || typeof name !== 'string') {
+    return '[NAME]';
+  }
+  
+  const parts = name.trim().split(/\s+/);
+  return parts.map(part => `${part.charAt(0)}***`).join(' ');
 }
 
 /**

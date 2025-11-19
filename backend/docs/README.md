@@ -12,6 +12,7 @@ This directory contains detailed documentation for the Visa Evaluation Backend A
 - **[Partner API Key Guide](PARTNER_API_KEY_GUIDE.md)**: Step-by-step guide for generating and managing partner API keys
 - **[Architecture Guide](ARCHITECTURE.md)**: System design, data flow, and component interactions
 - **[Deployment Guide](DEPLOYMENT.md)**: Production deployment instructions and best practices
+- **[Security Guide](SECURITY.md)**: Comprehensive security features, configurations, and best practices
 
 ### AI Evaluation Feature
 - **[AI Evaluation Guide](AI_EVALUATION_GUIDE.md)**: Comprehensive guide for AI-powered evaluation
@@ -48,6 +49,7 @@ This directory contains detailed documentation for the Visa Evaluation Backend A
 - **Test without API costs** → [Mock AI Mode](MOCK_AI_MODE.md)
 - **Deploy to production** → [Deployment Guide](DEPLOYMENT.md)
 - **Understand the architecture** → [Architecture Guide](ARCHITECTURE.md)
+- **Review security features** → [Security Guide](SECURITY.md)
 
 ## Documentation Philosophy
 

@@ -22,7 +22,13 @@ const envSchema = z.object({
     z.number().min(0).max(100)
   ),
   EVALUATOR_TYPE: z.enum(['rule-based', 'ai']).default('rule-based'),
-  REQUEST_TIMEOUT_MS: z.string().default('30000').transform(Number), // 30 seconds default
+  
+  // Timeout Configuration (in milliseconds)
+  // Hierarchy: REQUEST_TIMEOUT_MS should be >= AI_API_TIMEOUT_MS + buffer
+  REQUEST_TIMEOUT_MS: z.string().default('120000').transform(Number), // 2 minutes - overall request timeout
+  DB_QUERY_TIMEOUT_MS: z.string().default('10000').transform(Number), // 10 seconds - database operations
+  AI_API_TIMEOUT_MS: z.string().default('60000').transform(Number), // 60 seconds - AI API calls
+  FILE_UPLOAD_TIMEOUT_MS: z.string().default('120000').transform(Number), // 2 minutes - file uploads
 
   // AI Service Configuration (conditional based on EVALUATOR_TYPE)
   OPENAI_API_KEY: z.string().optional(),
@@ -47,7 +53,37 @@ const envSchema = z.object({
 
   // Security Configuration
   API_KEY_LENGTH: z.string().default('32').transform(Number),
-  CORS_ORIGINS: z.string().default('http://localhost:3000'),
+  ADMIN_API_KEY: z.string().optional(), // Administrator API key for sensitive endpoints
+  CORS_ORIGINS: z.string().default('http://localhost:3000').refine(
+    (origins) => {
+      // In production, ensure no wildcard is present
+      if (process.env.NODE_ENV === 'production') {
+        const originList = origins.split(',').map(o => o.trim()).filter(Boolean);
+        
+        // Check for wildcard
+        if (originList.includes('*')) {
+          return false;
+        }
+        
+        // Validate all origins are valid URLs
+        for (const origin of originList) {
+          try {
+            const url = new URL(origin);
+            // In production, enforce HTTPS
+            if (url.protocol !== 'https:') {
+              return false;
+            }
+          } catch (error) {
+            return false;
+          }
+        }
+      }
+      return true;
+    },
+    {
+      message: 'Production CORS origins must be valid HTTPS URLs without wildcards'
+    }
+  ),
 
   // Logging Configuration
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
@@ -60,12 +96,28 @@ const envSchema = z.object({
   RATE_LIMIT_PARTNER_MAX: z.string().default('1000').transform(Number),
   RATE_LIMIT_PARTNER_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
   RATE_LIMIT_PARTNER_EVAL_MAX: z.string().default('50').transform(Number),
-  RATE_LIMIT_PARTNER_EVAL_WINDOW_MS: z.string().default('3600000').transform(Number) // 1 hour
+  RATE_LIMIT_PARTNER_EVAL_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
+  RATE_LIMIT_PUBLIC_READ_MAX: z.string().default('200').transform(Number),
+  RATE_LIMIT_PUBLIC_READ_WINDOW_MS: z.string().default('900000').transform(Number), // 15 minutes
+  RATE_LIMIT_DOWNLOAD_MAX: z.string().default('20').transform(Number),
+  RATE_LIMIT_DOWNLOAD_WINDOW_MS: z.string().default('900000').transform(Number) // 15 minutes
 }).refine(
   (data) => data.EVALUATOR_TYPE !== 'ai' || data.OPENAI_API_KEY,
   {
     message: 'OPENAI_API_KEY is required when EVALUATOR_TYPE is set to "ai"',
     path: ['OPENAI_API_KEY']
+  }
+).refine(
+  (data) => data.REQUEST_TIMEOUT_MS >= data.AI_API_TIMEOUT_MS,
+  {
+    message: 'REQUEST_TIMEOUT_MS must be greater than or equal to AI_API_TIMEOUT_MS to prevent premature timeouts',
+    path: ['REQUEST_TIMEOUT_MS']
+  }
+).refine(
+  (data) => data.REQUEST_TIMEOUT_MS >= data.DB_QUERY_TIMEOUT_MS,
+  {
+    message: 'REQUEST_TIMEOUT_MS must be greater than or equal to DB_QUERY_TIMEOUT_MS',
+    path: ['REQUEST_TIMEOUT_MS']
   }
 );
 
