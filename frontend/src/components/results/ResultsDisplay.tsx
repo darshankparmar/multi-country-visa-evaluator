@@ -5,7 +5,10 @@ import { SummarySection } from './SummarySection'
 import { RecommendationsSection } from './RecommendationsSection'
 import { ConclusionSection } from './ConclusionSection'
 import { ActionButtons } from './ActionButtons'
-import type { EvaluationDetail } from '../../api/types'
+import { CriteriaAnalysisSection } from './CriteriaAnalysisSection'
+import { ScoreBreakdownSection } from './ScoreBreakdownSection'
+import { DocumentsAnalyzedSection } from './DocumentsAnalyzedSection'
+import type { EvaluationDetail, ApprovalLikelihood } from '../../api/types'
 
 interface ResultsDisplayProps {
   evaluation: EvaluationDetail
@@ -77,6 +80,33 @@ ${evaluation.results.conclusion}
     [evaluation.results]
   )
 
+  // Subtask 13.2: Check if new structured data exists
+  const hasStructuredData = useMemo(() => ({
+    criteriaAnalysis: Boolean(evaluation.results?.criteriaAnalysis && evaluation.results.criteriaAnalysis.length > 0),
+    prioritizedRecommendations: Boolean(evaluation.results?.prioritizedRecommendations && evaluation.results.prioritizedRecommendations.length > 0),
+    scoreBreakdown: Boolean(evaluation.results?.scoreBreakdown),
+    approvalLikelihood: Boolean(evaluation.results?.approvalLikelihood)
+  }), [evaluation.results])
+
+  // Subtask 13.7: Helper function to get approval likelihood color
+  const getApprovalLikelihoodColor = (likelihood: ApprovalLikelihood): string => {
+    switch (likelihood) {
+      case 'Strong':
+        return 'bg-green-100 text-green-800 border-green-300'
+      case 'Good':
+        return 'bg-blue-100 text-blue-800 border-blue-300'
+      case 'Moderate':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-300'
+      case 'Needs Improvement':
+        return 'bg-orange-100 text-orange-800 border-orange-300'
+      case 'Low':
+      case 'Not Viable':
+        return 'bg-red-100 text-red-800 border-red-300'
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300'
+    }
+  }
+
   // Defensive check for results
   if (!evaluation.results) {
     return (
@@ -112,19 +142,49 @@ ${evaluation.results.conclusion}
 
         <ScoreCard score={evaluation.results.score} />
         
+        {/* Subtask 13.7: Add approval likelihood display near score */}
+        {hasStructuredData.approvalLikelihood && evaluation.results.approvalLikelihood && (
+          <div className="mt-4 flex justify-center">
+            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg border font-medium ${getApprovalLikelihoodColor(evaluation.results.approvalLikelihood)}`}>
+              <svg 
+                className="w-5 h-5" 
+                fill="currentColor" 
+                viewBox="0 0 20 20"
+                aria-hidden="true"
+              >
+                <path 
+                  fillRule="evenodd" 
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" 
+                  clipRule="evenodd" 
+                />
+              </svg>
+              <span className="text-sm sm:text-base">
+                Approval Likelihood: <strong>{evaluation.results.approvalLikelihood}</strong>
+              </span>
+            </div>
+          </div>
+        )}
+        
+        {/* Subtask 13.3: Add CriteriaAnalysisSection after ScoreCard */}
+        {hasStructuredData.criteriaAnalysis && evaluation.results.criteriaAnalysis && (
+          <CriteriaAnalysisSection criteriaAnalysis={evaluation.results.criteriaAnalysis} />
+        )}
+        
+        {/* Subtask 13.4: Add ScoreBreakdownSection after CriteriaAnalysisSection */}
+        {hasStructuredData.scoreBreakdown && evaluation.results.scoreBreakdown && (
+          <ScoreBreakdownSection scoreBreakdown={evaluation.results.scoreBreakdown} />
+        )}
+        
         <SummarySection 
           summary={evaluation.results.summary}
           visaType={evaluation.visaApplication.visaType}
           country={evaluation.visaApplication.country}
         />
 
-        {/* Display prioritized recommendations if available, otherwise fall back to old format */}
-        {evaluation.results.prioritizedRecommendations && evaluation.results.prioritizedRecommendations.length > 0 && (
+        {/* Subtask 13.5: Update RecommendationsSection usage - handle both old and new format gracefully */}
+        {hasStructuredData.prioritizedRecommendations && evaluation.results.prioritizedRecommendations ? (
           <RecommendationsSection recommendations={evaluation.results.prioritizedRecommendations} />
-        )}
-        
-        {/* Fallback for old string array format */}
-        {!evaluation.results.prioritizedRecommendations && evaluation.results.recommendations && evaluation.results.recommendations.length > 0 && (
+        ) : evaluation.results.recommendations && evaluation.results.recommendations.length > 0 ? (
           <RecommendationsSection 
             recommendations={evaluation.results.recommendations.map(rec => ({
               priority: 'MEDIUM' as const,
@@ -132,12 +192,21 @@ ${evaluation.results.conclusion}
               relatedCriterion: undefined
             }))} 
           />
-        )}
+        ) : null}
 
         {evaluation.results.conclusion && (
           <ConclusionSection 
             conclusion={evaluation.results.conclusion}
             score={evaluation.results.score}
+          />
+        )}
+
+        {/* Subtask 13.6: Add DocumentsAnalyzedSection in application details area */}
+        {evaluation.documents && evaluation.documents.length > 0 && (
+          <DocumentsAnalyzedSection 
+            documents={evaluation.documents}
+            parsedDocuments={evaluation.parsedDocuments}
+            validationResults={evaluation.results.validationResults}
           />
         )}
 
