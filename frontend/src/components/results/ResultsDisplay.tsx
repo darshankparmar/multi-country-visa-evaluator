@@ -46,7 +46,10 @@ Documents Submitted: ${evaluation.documents.length}
 Summary:
 ${evaluation.results.summary}
 
-${evaluation.results.recommendations && evaluation.results.recommendations.length > 0 ? `
+${evaluation.results.prioritizedRecommendations && evaluation.results.prioritizedRecommendations.length > 0 ? `
+Recommendations:
+${evaluation.results.prioritizedRecommendations.map((rec, idx) => `${idx + 1}. [${rec.priority}] ${rec.text}${rec.relatedCriterion ? ` (Related to: ${rec.relatedCriterion})` : ''}`).join('\n')}
+` : evaluation.results.recommendations && evaluation.results.recommendations.length > 0 ? `
 Recommendations:
 ${evaluation.results.recommendations.map((rec, idx) => `${idx + 1}. ${rec}`).join('\n')}
 ` : ''}
@@ -115,8 +118,20 @@ ${evaluation.results.conclusion}
           country={evaluation.visaApplication.country}
         />
 
-        {evaluation.results.recommendations && evaluation.results.recommendations.length > 0 && (
-          <RecommendationsSection recommendations={evaluation.results.recommendations} />
+        {/* Display prioritized recommendations if available, otherwise fall back to old format */}
+        {evaluation.results.prioritizedRecommendations && evaluation.results.prioritizedRecommendations.length > 0 && (
+          <RecommendationsSection recommendations={evaluation.results.prioritizedRecommendations} />
+        )}
+        
+        {/* Fallback for old string array format */}
+        {!evaluation.results.prioritizedRecommendations && evaluation.results.recommendations && evaluation.results.recommendations.length > 0 && (
+          <RecommendationsSection 
+            recommendations={evaluation.results.recommendations.map(rec => ({
+              priority: 'MEDIUM' as const,
+              text: rec,
+              relatedCriterion: undefined
+            }))} 
+          />
         )}
 
         {evaluation.results.conclusion && (

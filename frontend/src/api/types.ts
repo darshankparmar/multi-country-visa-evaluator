@@ -83,6 +83,18 @@ export interface EvaluationResponse {
   approvalLikelihood?: ApprovalLikelihood
 }
 
+/**
+ * Interface for parsed document information
+ */
+export interface ParsedDocument {
+  filename: string
+  originalName: string
+  extractedText?: string
+  documentType: string
+  success: boolean
+  error?: string
+}
+
 export interface EvaluationDetail {
   evaluationId: string
   userInfo: {
@@ -97,7 +109,9 @@ export interface EvaluationDetail {
     filename: string
     originalName: string
     uploadedAt: string
+    extractedText?: string
   }>
+  parsedDocuments?: ParsedDocument[]
   results: {
     score: number
     summary: string
@@ -108,6 +122,16 @@ export interface EvaluationDetail {
     prioritizedRecommendations?: PrioritizedRecommendation[]
     scoreBreakdown?: ScoreBreakdown
     approvalLikelihood?: ApprovalLikelihood
+    validationResults?: Array<{
+      criterion: string
+      met: boolean
+      score: number
+      maxScore: number
+      details: string
+      isCritical: boolean
+      evidence?: string[]
+      sourceDocument?: string
+    }>
   }
   createdAt: string
   updatedAt: string
