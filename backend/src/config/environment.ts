@@ -47,7 +47,19 @@ const envSchema = z.object({
 
   // Security Configuration
   API_KEY_LENGTH: z.string().default('32').transform(Number),
-  CORS_ORIGINS: z.string().default('http://localhost:3000'),
+  CORS_ORIGINS: z.string().default('http://localhost:3000').refine(
+    (origins) => {
+      // In production, ensure no wildcard is present
+      if (process.env.NODE_ENV === 'production') {
+        const originList = origins.split(',').map(o => o.trim());
+        return !originList.includes('*');
+      }
+      return true;
+    },
+    {
+      message: 'Wildcard (*) CORS origin is not allowed in production environment'
+    }
+  ),
 
   // Logging Configuration
   LOG_LEVEL: z.enum(['error', 'warn', 'info', 'debug']).default('info'),
