@@ -27,7 +27,6 @@ const evaluationSchema = new Schema<IEvaluation>(
         required: [true, 'User email is required'],
         trim: true,
         lowercase: true,
-        index: true,
         validate: {
           validator: function(email: string) {
             return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
@@ -163,8 +162,7 @@ const evaluationSchema = new Schema<IEvaluation>(
     },
     partnerId: {
       type: Schema.Types.ObjectId,
-      ref: 'Partner',
-      index: true
+      ref: 'Partner'
     }
   },
   {
