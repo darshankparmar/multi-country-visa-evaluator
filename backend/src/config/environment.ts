@@ -58,13 +58,30 @@ const envSchema = z.object({
     (origins) => {
       // In production, ensure no wildcard is present
       if (process.env.NODE_ENV === 'production') {
-        const originList = origins.split(',').map(o => o.trim());
-        return !originList.includes('*');
+        const originList = origins.split(',').map(o => o.trim()).filter(Boolean);
+        
+        // Check for wildcard
+        if (originList.includes('*')) {
+          return false;
+        }
+        
+        // Validate all origins are valid URLs
+        for (const origin of originList) {
+          try {
+            const url = new URL(origin);
+            // In production, enforce HTTPS
+            if (url.protocol !== 'https:') {
+              return false;
+            }
+          } catch (error) {
+            return false;
+          }
+        }
       }
       return true;
     },
     {
-      message: 'Wildcard (*) CORS origin is not allowed in production environment'
+      message: 'Production CORS origins must be valid HTTPS URLs without wildcards'
     }
   ),
 

@@ -65,7 +65,13 @@ export const createEvaluationSchema = z.object({
     .min(1, 'Name is required')
     .max(100, 'Name must be less than 100 characters')
     .trim()
-    .regex(/^[a-zA-Z\s'-]+$/, 'Name contains invalid characters'),
+    .regex(/^[a-zA-Z\s'-]+$/, 'Name contains invalid characters')
+    .refine((name) => {
+      // Additional check for control characters (defense in depth)
+      return !name.includes('\n') && !name.includes('\r') && !name.includes('\0');
+    }, {
+      message: 'Name contains invalid control characters'
+    }),
   
   email: z.string()
     .min(1, 'Email is required')

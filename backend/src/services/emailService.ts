@@ -72,7 +72,10 @@ export class EmailService {
         user: config.SMTP_USER
       });
     } catch (error) {
-      logger.error('Failed to initialize email transporter', { error });
+      logger.error('Failed to initialize email transporter', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
       this.enabled = false;
     }
   }
@@ -105,6 +108,9 @@ export class EmailService {
       throw new ValidationError('Invalid email address');
     }
 
+    // Sanitize name to prevent any potential injection (defense in depth)
+    const sanitizedName = this.sanitizeForEmail(name);
+
     try {
       const config = getConfig();
       const fromAddress = config.SMTP_FROM || config.SMTP_USER || 'noreply@opensphere.ai';
@@ -113,8 +119,8 @@ export class EmailService {
         from: `Visa Evaluator <${fromAddress}>`,
         to: email,
         subject: 'Your Visa Evaluation Report is Ready',
-        html: this.generateEmailTemplate({ name, score, summary, evaluationId, recommendations, conclusion }),
-        text: this.generatePlainTextEmail({ name, score, summary, evaluationId, recommendations, conclusion })
+        html: this.generateEmailTemplate({ name: sanitizedName, score, summary, evaluationId, recommendations, conclusion }),
+        text: this.generatePlainTextEmail({ name: sanitizedName, score, summary, evaluationId, recommendations, conclusion })
       };
 
       // Generate and attach Markdown report if evaluation is provided
@@ -160,6 +166,26 @@ export class EmailService {
         evaluationId
       });
     }
+  }
+
+  /**
+   * Sanitize string for safe use in email content
+   * Removes control characters that could be used for injection
+   * 
+   * @param value - String to sanitize
+   * @returns Sanitized string
+   * @private
+   */
+  private sanitizeForEmail(value: string): string {
+    if (!value || typeof value !== 'string') {
+      return '';
+    }
+
+    // Remove control characters (CRLF, null bytes, etc.)
+    return value
+      .replace(/[\r\n\0\t]/g, '')
+      .replace(/[<>]/g, '') // Remove angle brackets for additional safety
+      .trim();
   }
 
   /**

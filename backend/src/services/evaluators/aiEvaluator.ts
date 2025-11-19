@@ -749,7 +749,10 @@ Ensure all category names match exactly the categories listed above.`;
         };
       }
     } catch (error) {
-      logger.warn('Failed to parse structured response, falling back to text parsing', { error });
+      logger.warn('Failed to parse structured response, falling back to text parsing', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
     }
 
     // Fallback to text parsing if JSON parsing fails

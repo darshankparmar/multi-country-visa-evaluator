@@ -132,7 +132,10 @@ export function createRateLimiter(config: RateLimitConfig) {
       next();
     } catch (error) {
       // Log error but don't block the request
-      logger.error('Rate limiter error', { error });
+      logger.error('Rate limiter error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        errorType: error instanceof Error ? error.constructor.name : 'Unknown'
+      });
       next();
     }
   };

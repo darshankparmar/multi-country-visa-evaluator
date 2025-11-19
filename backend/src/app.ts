@@ -3,6 +3,7 @@ import cors from 'cors';
 import { getConfig } from './config/environment';
 import { requestLogger } from './middleware/requestLogger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { requestTimeout } from './middleware/timeout';
 import { initializeRateLimiters, generalApiLimiter } from './config/rateLimits';
 import { configureSecurityHeaders, additionalSecurityHeaders } from './middleware/securityHeaders';
 import { logger } from './config/logger';
@@ -30,10 +31,14 @@ export function createApp(): Application {
       throw new Error('Wildcard CORS origin is not allowed in production environment');
     }
 
-    // Validate all origins are proper URLs
+    // Validate all origins are proper HTTPS URLs
     for (const origin of corsOrigins) {
       try {
-        new URL(origin);
+        const url = new URL(origin);
+        if (url.protocol !== 'https:') {
+          logger.error('CRITICAL: Non-HTTPS CORS origin in production', { origin });
+          throw new Error(`Production CORS origins must use HTTPS: ${origin}`);
+        }
       } catch (error) {
         logger.error('CRITICAL: Invalid CORS origin format', { origin });
         throw new Error(`Invalid CORS origin format: ${origin}`);
@@ -42,7 +47,8 @@ export function createApp(): Application {
 
     logger.info('CORS configuration validated for production', {
       allowedOrigins: corsOrigins.length,
-      origins: corsOrigins
+      origins: corsOrigins,
+      protocol: 'HTTPS enforced'
     });
   } else {
     logger.info('CORS configuration loaded', {
@@ -129,6 +135,9 @@ export function createApp(): Application {
   // Body parser middleware
   app.use(express.json({ limit: BODY_SIZE.JSON_LIMIT }));
   app.use(express.urlencoded({ extended: true, limit: BODY_SIZE.URLENCODED_LIMIT }));
+
+  // Request timeout middleware (must be before routes)
+  app.use(requestTimeout(config.REQUEST_TIMEOUT_MS));
 
   // Request logging middleware
   app.use(requestLogger);
