@@ -113,3 +113,67 @@ export interface ListEvaluationsQuery {
   country?: string;
   email?: string;
 }
+
+/**
+ * Rating type for criterion analysis
+ */
+export type CriterionRating = 'STRONG' | 'GOOD' | 'MODERATE' | 'WEAK' | 'CRITICAL_GAP';
+
+/**
+ * Interface for criterion analysis in structured evaluation
+ */
+export interface CriterionAnalysis {
+  name: string;
+  rating: CriterionRating;
+  evidence: string[];
+  gaps: string[];
+  recommendation?: string;
+  isCritical: boolean;
+}
+
+/**
+ * Priority type for recommendations
+ */
+export type RecommendationPriority = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+
+/**
+ * Interface for prioritized recommendation
+ */
+export interface PrioritizedRecommendation {
+  priority: RecommendationPriority;
+  text: string;
+  relatedCriterion?: string;
+}
+
+/**
+ * Approval likelihood type
+ */
+export type ApprovalLikelihood = 'Strong' | 'Good' | 'Moderate' | 'Needs Improvement' | 'Low' | 'Not Viable';
+
+/**
+ * Interface for structured evaluation result
+ */
+export interface StructuredEvaluationResult {
+  score: number;
+  criteriaAnalysis: CriterionAnalysis[];
+  prioritizedRecommendations: PrioritizedRecommendation[];
+  summary: string;
+  conclusion: string;
+  scoreBreakdown: {
+    baseScore: number;
+    penalties: Array<{
+      requirement: string;
+      points: number;
+      reason: string;
+    }>;
+    totalPenalty: number;
+    adjustedScore: number;
+    breakdown: Array<{
+      criterion: string;
+      points: number;
+      maxPoints: number;
+      percentage: number;
+    }>;
+  };
+  approvalLikelihood: ApprovalLikelihood;
+}
