@@ -1,5 +1,5 @@
-import { validateEmailAddress, sanitizeEmailAddress, validateAndSanitizeEmail, isDisposableEmail } from '../emailValidator';
-import { ValidationError } from '../errors';
+import { validateEmailAddress, sanitizeEmailAddress, validateAndSanitizeEmail, isDisposableEmail } from '../utils/emailValidator';
+import { ValidationError } from '../utils/errors';
 
 describe('Email Validator', () => {
   describe('validateEmailAddress', () => {
