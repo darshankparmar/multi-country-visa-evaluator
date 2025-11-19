@@ -1,6 +1,7 @@
 import mongoose, { Schema } from 'mongoose';
 import { v4 as uuidv4 } from 'uuid';
 import { IEvaluation } from '../types/evaluation.types';
+import { SCORES } from '../constants';
 
 /**
  * Mongoose schema for Evaluation
@@ -74,8 +75,8 @@ const evaluationSchema = new Schema<IEvaluation>(
     results: {
       score: {
         type: Number,
-        min: 0,
-        max: 100
+        min: SCORES.MIN_SCORE,
+        max: SCORES.MAX_SCORE
       },
       summary: {
         type: String

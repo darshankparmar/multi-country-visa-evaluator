@@ -1,3 +1,5 @@
+import { HTTP_STATUS } from '../constants';
+
 /**
  * Base application error class
  * All custom errors should extend this class
@@ -35,7 +37,7 @@ export class ValidationError extends AppError {
    * @param message - Validation error message
    */
   constructor(message: string) {
-    super(message, 400, true);
+    super(message, HTTP_STATUS.BAD_REQUEST, true);
     Object.setPrototypeOf(this, ValidationError.prototype);
   }
 }
@@ -50,7 +52,7 @@ export class AuthenticationError extends AppError {
    * @param message - Authentication error message (default: 'Unauthorized')
    */
   constructor(message: string = 'Unauthorized') {
-    super(message, 401, true);
+    super(message, HTTP_STATUS.UNAUTHORIZED, true);
     Object.setPrototypeOf(this, AuthenticationError.prototype);
   }
 }
@@ -65,7 +67,7 @@ export class AuthorizationError extends AppError {
    * @param message - Authorization error message (default: 'Forbidden')
    */
   constructor(message: string = 'Forbidden') {
-    super(message, 403, true);
+    super(message, HTTP_STATUS.FORBIDDEN, true);
     Object.setPrototypeOf(this, AuthorizationError.prototype);
   }
 }
@@ -80,7 +82,7 @@ export class NotFoundError extends AppError {
    * @param resource - Name of the resource that wasn't found
    */
   constructor(resource: string) {
-    super(`${resource} not found`, 404, true);
+    super(`${resource} not found`, HTTP_STATUS.NOT_FOUND, true);
     Object.setPrototypeOf(this, NotFoundError.prototype);
   }
 }
@@ -95,7 +97,7 @@ export class ConflictError extends AppError {
    * @param message - Conflict error message
    */
   constructor(message: string) {
-    super(message, 409, true);
+    super(message, HTTP_STATUS.CONFLICT, true);
     Object.setPrototypeOf(this, ConflictError.prototype);
   }
 }
@@ -110,7 +112,7 @@ export class InternalServerError extends AppError {
    * @param message - Error message (default: 'Internal server error')
    */
   constructor(message: string = 'Internal server error') {
-    super(message, 500, false);
+    super(message, HTTP_STATUS.INTERNAL_SERVER_ERROR, false);
     Object.setPrototypeOf(this, InternalServerError.prototype);
   }
 }
@@ -125,7 +127,7 @@ export class TimeoutError extends AppError {
    * @param message - Timeout error message (default: 'Request timeout')
    */
   constructor(message: string = 'Request timeout') {
-    super(message, 408, true);
+    super(message, HTTP_STATUS.REQUEST_TIMEOUT, true);
     Object.setPrototypeOf(this, TimeoutError.prototype);
   }
 }

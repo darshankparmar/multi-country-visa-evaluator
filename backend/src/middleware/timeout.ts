@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { logger } from '../config/logger';
+import { HTTP_STATUS, ERROR_CODES } from '../constants';
 
 /**
  * Extended Request interface with timeout support
@@ -54,10 +55,10 @@ export function requestTimeout(timeoutMs: number) {
         // Abort any ongoing operations
         abortController.abort();
 
-        res.status(408).json({
+        res.status(HTTP_STATUS.REQUEST_TIMEOUT).json({
           status: 'error',
           message: `Request timeout: Processing exceeded ${timeoutMs / 1000} seconds`,
-          code: 'REQUEST_TIMEOUT',
+          code: ERROR_CODES.REQUEST_TIMEOUT,
           timestamp: new Date().toISOString()
         });
       }

@@ -1,4 +1,5 @@
 import { logger } from '../config/logger';
+import { MEMORY_LIMITS, TIMEOUTS } from '../constants';
 
 /**
  * Rate Limit Store
@@ -33,10 +34,10 @@ export class InMemoryRateLimitStore {
   private cleanupInterval: NodeJS.Timeout | null = null;
   
   // Memory leak prevention limits
-  private readonly MAX_STORE_SIZE = 10000;           // Maximum number of keys
-  private readonly MAX_REQUESTS_PER_KEY = 1000;      // Maximum requests array size per key
-  private readonly CLEANUP_INTERVAL_MS = 30000;      // Cleanup every 30 seconds
-  private readonly MEMORY_WARNING_THRESHOLD = 0.8;   // Warn at 80% capacity
+  private readonly MAX_STORE_SIZE = MEMORY_LIMITS.MAX_STORE_SIZE;
+  private readonly MAX_REQUESTS_PER_KEY = MEMORY_LIMITS.MAX_REQUESTS_PER_KEY;
+  private readonly CLEANUP_INTERVAL_MS = TIMEOUTS.CLEANUP_INTERVAL;
+  private readonly MEMORY_WARNING_THRESHOLD = MEMORY_LIMITS.MEMORY_WARNING_THRESHOLD;
 
   constructor(
     private windowMs: number,

@@ -1,6 +1,7 @@
 import { fileTypeFromBuffer } from 'file-type';
 import { ValidationError } from './errors';
 import { logger } from '../config/logger';
+import { FILE_SIZE, UPLOAD_LIMITS } from '../constants';
 
 /**
  * Allowed file types with their MIME types and extensions
@@ -13,11 +14,6 @@ const ALLOWED_FILE_TYPES = {
   'image/jpeg': ['jpg', 'jpeg'],
   'image/png': ['png']
 } as const;
-
-/**
- * Maximum file size (5MB)
- */
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 /**
  * PDF file signature (magic number)
@@ -39,9 +35,9 @@ export async function validateFileContent(
   originalName: string
 ): Promise<void> {
   // Check file size
-  if (buffer.length > MAX_FILE_SIZE) {
+  if (buffer.length > FILE_SIZE.MAX_FILE_SIZE) {
     throw new ValidationError(
-      `File ${originalName} exceeds maximum size of ${MAX_FILE_SIZE / 1024 / 1024}MB`
+      `File ${originalName} exceeds maximum size of ${FILE_SIZE.MAX_FILE_SIZE / 1024 / 1024}MB`
     );
   }
 
@@ -116,7 +112,7 @@ export async function validateFileContent(
  */
 function isTextFile(buffer: Buffer): boolean {
   // Check first 8KB for binary content
-  const sampleSize = Math.min(buffer.length, 8192);
+  const sampleSize = Math.min(buffer.length, FILE_SIZE.TEXT_SAMPLE_SIZE);
   const sample = buffer.slice(0, sampleSize);
 
   let binaryCount = 0;
@@ -141,7 +137,7 @@ function isTextFile(buffer: Buffer): boolean {
 
   // If more than 5% of sample is binary, consider it a binary file
   const binaryRatio = binaryCount / sample.length;
-  return binaryRatio < 0.05;
+  return binaryRatio < UPLOAD_LIMITS.BINARY_THRESHOLD;
 }
 
 /**
@@ -174,7 +170,7 @@ async function validatePDF(buffer: Buffer, originalName: string): Promise<void> 
   }
 
   // Check for embedded JavaScript (potential XSS)
-  const content = buffer.toString('utf-8', 0, Math.min(buffer.length, 50000));
+  const content = buffer.toString('utf-8', 0, Math.min(buffer.length, FILE_SIZE.PDF_SCAN_SIZE));
   
   if (content.includes('/JavaScript') || content.includes('/JS')) {
     logger.warn('PDF validation warning: contains JavaScript', {
@@ -214,10 +210,9 @@ async function validatePDF(buffer: Buffer, originalName: string): Promise<void> 
  */
 async function validateImage(buffer: Buffer, originalName: string): Promise<void> {
   // Check for reasonable image size (not too large)
-  const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-  if (buffer.length > MAX_IMAGE_SIZE) {
+  if (buffer.length > FILE_SIZE.MAX_IMAGE_SIZE) {
     throw new ValidationError(
-      `Image ${originalName} exceeds maximum size of ${MAX_IMAGE_SIZE / 1024 / 1024}MB`
+      `Image ${originalName} exceeds maximum size of ${FILE_SIZE.MAX_IMAGE_SIZE / 1024 / 1024}MB`
     );
   }
 

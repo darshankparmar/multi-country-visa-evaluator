@@ -1,4 +1,5 @@
 import { Response } from 'express';
+import { HTTP_STATUS, ERROR_CODES } from '../constants';
 
 /**
  * Standard success response structure
@@ -49,7 +50,7 @@ export interface PaginatedResponse<T = any> {
 export function sendSuccess<T>(
   res: Response,
   data: T,
-  statusCode: number = 200,
+  statusCode: number = HTTP_STATUS.OK,
   message?: string
 ): void {
   const response: SuccessResponse<T> = {
@@ -76,7 +77,7 @@ export function sendSuccess<T>(
 export function sendError(
   res: Response,
   message: string,
-  statusCode: number = 500,
+  statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR,
   code?: string,
   errors?: Array<{ field?: string; message: string }>,
   stack?: string
@@ -117,18 +118,18 @@ export function sendError(
  */
 function getDefaultErrorCode(statusCode: number): string {
   const codes: { [key: number]: string } = {
-    400: 'BAD_REQUEST',
-    401: 'UNAUTHORIZED',
-    403: 'FORBIDDEN',
-    404: 'NOT_FOUND',
-    408: 'REQUEST_TIMEOUT',
-    409: 'CONFLICT',
-    422: 'UNPROCESSABLE_ENTITY',
-    429: 'RATE_LIMIT_EXCEEDED',
-    500: 'INTERNAL_SERVER_ERROR',
-    502: 'BAD_GATEWAY',
-    503: 'SERVICE_UNAVAILABLE',
-    504: 'GATEWAY_TIMEOUT'
+    [HTTP_STATUS.BAD_REQUEST]: ERROR_CODES.VALIDATION_ERROR,
+    [HTTP_STATUS.UNAUTHORIZED]: ERROR_CODES.UNAUTHORIZED,
+    [HTTP_STATUS.FORBIDDEN]: ERROR_CODES.FORBIDDEN,
+    [HTTP_STATUS.NOT_FOUND]: ERROR_CODES.NOT_FOUND,
+    [HTTP_STATUS.REQUEST_TIMEOUT]: ERROR_CODES.REQUEST_TIMEOUT,
+    [HTTP_STATUS.CONFLICT]: ERROR_CODES.CONFLICT,
+    [HTTP_STATUS.UNPROCESSABLE_ENTITY]: ERROR_CODES.VALIDATION_ERROR,
+    [HTTP_STATUS.RATE_LIMIT_EXCEEDED]: ERROR_CODES.RATE_LIMIT_EXCEEDED,
+    [HTTP_STATUS.INTERNAL_SERVER_ERROR]: ERROR_CODES.INTERNAL_SERVER_ERROR,
+    [HTTP_STATUS.BAD_GATEWAY]: ERROR_CODES.BAD_GATEWAY,
+    [HTTP_STATUS.SERVICE_UNAVAILABLE]: ERROR_CODES.SERVICE_UNAVAILABLE,
+    [HTTP_STATUS.GATEWAY_TIMEOUT]: ERROR_CODES.GATEWAY_TIMEOUT
   };
   return codes[statusCode] || 'ERROR';
 }
@@ -148,7 +149,7 @@ export function sendPaginated<T>(
   page: number,
   limit: number,
   total: number,
-  statusCode: number = 200
+  statusCode: number = HTTP_STATUS.OK
 ): void {
   const totalPages = Math.ceil(total / limit);
 
@@ -177,7 +178,7 @@ export function sendCreated<T>(
   data: T,
   message?: string
 ): void {
-  sendSuccess(res, data, 201, message);
+  sendSuccess(res, data, HTTP_STATUS.CREATED, message);
 }
 
 /**
@@ -185,7 +186,7 @@ export function sendCreated<T>(
  * @param res - Express response object
  */
 export function sendNoContent(res: Response): void {
-  res.status(204).send();
+  res.status(HTTP_STATUS.NO_CONTENT).send();
 }
 
 /**
@@ -199,7 +200,7 @@ export function sendValidationError(
   message: string = 'Validation failed',
   errors?: Array<{ field?: string; message: string }>
 ): void {
-  sendError(res, message, 400, 'VALIDATION_ERROR', errors);
+  sendError(res, message, HTTP_STATUS.BAD_REQUEST, ERROR_CODES.VALIDATION_ERROR, errors);
 }
 
 /**
@@ -211,7 +212,7 @@ export function sendUnauthorized(
   res: Response,
   message: string = 'Authentication required'
 ): void {
-  sendError(res, message, 401, 'UNAUTHORIZED');
+  sendError(res, message, HTTP_STATUS.UNAUTHORIZED, ERROR_CODES.UNAUTHORIZED);
 }
 
 /**
@@ -223,7 +224,7 @@ export function sendForbidden(
   res: Response,
   message: string = 'Access forbidden'
 ): void {
-  sendError(res, message, 403, 'FORBIDDEN');
+  sendError(res, message, HTTP_STATUS.FORBIDDEN, ERROR_CODES.FORBIDDEN);
 }
 
 /**
@@ -235,7 +236,7 @@ export function sendNotFound(
   res: Response,
   resource: string = 'Resource'
 ): void {
-  sendError(res, `${resource} not found`, 404, 'NOT_FOUND');
+  sendError(res, `${resource} not found`, HTTP_STATUS.NOT_FOUND, ERROR_CODES.NOT_FOUND);
 }
 
 /**
@@ -247,7 +248,7 @@ export function sendConflict(
   res: Response,
   message: string
 ): void {
-  sendError(res, message, 409, 'CONFLICT');
+  sendError(res, message, HTTP_STATUS.CONFLICT, ERROR_CODES.CONFLICT);
 }
 
 /**
@@ -261,5 +262,5 @@ export function sendInternalError(
   message: string = 'Internal server error',
   stack?: string
 ): void {
-  sendError(res, message, 500, 'INTERNAL_SERVER_ERROR', undefined, stack);
+  sendError(res, message, HTTP_STATUS.INTERNAL_SERVER_ERROR, ERROR_CODES.INTERNAL_SERVER_ERROR, undefined, stack);
 }

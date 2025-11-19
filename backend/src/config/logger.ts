@@ -1,5 +1,6 @@
 import winston from 'winston';
 import path from 'path';
+import { LOG_ROTATION } from '../constants';
 
 /**
  * Get log level based on NODE_ENV
@@ -73,15 +74,15 @@ export const logger = winston.createLogger({
     new winston.transports.File({
       filename: path.join(logsDir, 'error.log'),
       level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
+      maxsize: LOG_ROTATION.MAX_SIZE,
+      maxFiles: LOG_ROTATION.MAX_FILES
     }),
     
     // Combined log file - all logs
     new winston.transports.File({
       filename: path.join(logsDir, 'combined.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
+      maxsize: LOG_ROTATION.MAX_SIZE,
+      maxFiles: LOG_ROTATION.MAX_FILES
     })
   ],
   

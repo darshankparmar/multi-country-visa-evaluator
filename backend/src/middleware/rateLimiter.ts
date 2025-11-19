@@ -24,6 +24,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { InMemoryRateLimitStore } from './rateLimitStore';
 import { logger } from '../config/logger';
+import { HTTP_STATUS, ERROR_CODES } from '../constants';
 
 export interface RateLimitConfig {
   windowMs: number;        // Time window in milliseconds
@@ -116,11 +117,11 @@ export function createRateLimiter(config: RateLimitConfig) {
         }
 
         // Enhanced 429 response with clear retry information
-        return res.status(429).json({
+        return res.status(HTTP_STATUS.RATE_LIMIT_EXCEEDED).json({
           status: 'error',
           message,
           details,
-          code: 'RATE_LIMIT_EXCEEDED',
+          code: ERROR_CODES.RATE_LIMIT_EXCEEDED,
           retryAfter,
           limit: limitInfo.limit,
           resetTime: limitInfo.reset.toISOString(),

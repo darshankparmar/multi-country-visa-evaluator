@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { getConfig } from '../config/environment';
 import { logger } from '../config/logger';
+import { HTTP_STATUS, ERROR_CODES } from '../constants';
 
 /**
  * Administrator authentication middleware
@@ -22,10 +23,10 @@ export function authenticateAdmin(req: Request, res: Response, next: NextFunctio
       ip: req.ip
     });
     
-    res.status(503).json({
+    res.status(HTTP_STATUS.SERVICE_UNAVAILABLE).json({
       status: 'error',
       message: 'Administrator authentication not configured',
-      code: 'ADMIN_AUTH_NOT_CONFIGURED'
+      code: ERROR_CODES.ADMIN_AUTH_NOT_CONFIGURED
     });
     return;
   }
@@ -38,10 +39,10 @@ export function authenticateAdmin(req: Request, res: Response, next: NextFunctio
       userAgent: req.headers['user-agent']
     });
     
-    res.status(401).json({
+    res.status(HTTP_STATUS.UNAUTHORIZED).json({
       status: 'error',
       message: 'Administrator authentication required. Provide x-admin-key header.',
-      code: 'ADMIN_AUTH_REQUIRED'
+      code: ERROR_CODES.ADMIN_AUTH_REQUIRED
     });
     return;
   }
@@ -55,10 +56,10 @@ export function authenticateAdmin(req: Request, res: Response, next: NextFunctio
       userAgent: req.headers['user-agent']
     });
     
-    res.status(403).json({
+    res.status(HTTP_STATUS.FORBIDDEN).json({
       status: 'error',
       message: 'Invalid administrator credentials',
-      code: 'INVALID_ADMIN_KEY'
+      code: ERROR_CODES.INVALID_ADMIN_KEY
     });
     return;
   }

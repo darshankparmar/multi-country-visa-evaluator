@@ -6,6 +6,7 @@ import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { initializeRateLimiters, generalApiLimiter } from './config/rateLimits';
 import { configureSecurityHeaders, additionalSecurityHeaders } from './middleware/securityHeaders';
 import { logger } from './config/logger';
+import { BODY_SIZE, CACHE_DURATION, CORS_METHODS, CORS_HEADERS } from './constants';
 import routes from './routes/index';
 
 /**
@@ -114,9 +115,9 @@ export function createApp(): Application {
       }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key'],
-    maxAge: 86400 // 24 hours - cache preflight requests
+    methods: CORS_METHODS,
+    allowedHeaders: CORS_HEADERS,
+    maxAge: CACHE_DURATION.CORS_PREFLIGHT
   };
 
   // Apply security headers (must be early in middleware chain)
@@ -125,9 +126,9 @@ export function createApp(): Application {
 
   app.use(cors(corsOptions));
 
-  // Body parser middleware with 10MB limit
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+  // Body parser middleware
+  app.use(express.json({ limit: BODY_SIZE.JSON_LIMIT }));
+  app.use(express.urlencoded({ extended: true, limit: BODY_SIZE.URLENCODED_LIMIT }));
 
   // Request logging middleware
   app.use(requestLogger);

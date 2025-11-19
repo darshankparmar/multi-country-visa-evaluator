@@ -1,6 +1,7 @@
 import { Query } from 'mongoose';
 import { getConfig } from '../config/environment';
 import { logger } from '../config/logger';
+import { DB_THRESHOLDS } from '../constants';
 
 /**
  * Wraps a Mongoose query with timeout support
@@ -27,7 +28,7 @@ export async function withTimeout<T>(
     const duration = Date.now() - startTime;
 
     // Log slow queries (> 50% of timeout)
-    if (duration > timeout * 0.5) {
+    if (duration > timeout * DB_THRESHOLDS.SLOW_QUERY_RATIO) {
       logger.warn('Slow database query detected', {
         duration,
         timeout,

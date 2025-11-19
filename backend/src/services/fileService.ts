@@ -5,6 +5,7 @@ import { getConfig } from '../config/environment';
 import { ValidationError } from '../utils/errors';
 import { validateFile } from '../utils/fileValidator';
 import { logger } from '../config/logger';
+import { TEXT_LIMITS } from '../constants';
 
 /**
  * Represents a stored file with metadata
@@ -129,7 +130,7 @@ export class FileService {
     const baseName = path.basename(originalName, ext);
     const sanitizedName = baseName
       .replace(/[^a-zA-Z0-9_-]/g, '_')
-      .substring(0, 50); // Limit length
+      .substring(0, TEXT_LIMITS.FILENAME_MAX);
     
     // Ensure sanitized name is not empty
     if (sanitizedName.length === 0) {

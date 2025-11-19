@@ -1,25 +1,11 @@
 import { ValidationError } from './errors';
+import { EMAIL } from '../constants';
 
 /**
  * RFC 5322 compliant email validation regex
  * More strict than basic email validation
  */
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
-
-/**
- * Maximum email length per RFC 5321
- */
-const MAX_EMAIL_LENGTH = 254;
-
-/**
- * Maximum local part length (before @)
- */
-const MAX_LOCAL_PART_LENGTH = 64;
-
-/**
- * Maximum domain length (after @)
- */
-const MAX_DOMAIN_LENGTH = 255;
 
 /**
  * Validates email address format and checks for injection attempts
@@ -54,8 +40,8 @@ export function validateEmailAddress(email: string): boolean {
     throw new ValidationError('Email address cannot be empty');
   }
 
-  if (trimmedEmail.length > MAX_EMAIL_LENGTH) {
-    throw new ValidationError(`Email address exceeds maximum length of ${MAX_EMAIL_LENGTH} characters`);
+  if (trimmedEmail.length > EMAIL.MAX_LENGTH) {
+    throw new ValidationError(`Email address exceeds maximum length of ${EMAIL.MAX_LENGTH} characters`);
   }
 
   // Check for multiple @ symbols
@@ -68,13 +54,13 @@ export function validateEmailAddress(email: string): boolean {
   const [localPart, domain] = trimmedEmail.split('@');
 
   // Validate local part length
-  if (localPart.length > MAX_LOCAL_PART_LENGTH) {
-    throw new ValidationError(`Email local part exceeds maximum length of ${MAX_LOCAL_PART_LENGTH} characters`);
+  if (localPart.length > EMAIL.MAX_LOCAL_PART) {
+    throw new ValidationError(`Email local part exceeds maximum length of ${EMAIL.MAX_LOCAL_PART} characters`);
   }
 
   // Validate domain length
-  if (domain.length > MAX_DOMAIN_LENGTH) {
-    throw new ValidationError(`Email domain exceeds maximum length of ${MAX_DOMAIN_LENGTH} characters`);
+  if (domain.length > EMAIL.MAX_DOMAIN) {
+    throw new ValidationError(`Email domain exceeds maximum length of ${EMAIL.MAX_DOMAIN} characters`);
   }
 
   // Check for consecutive dots

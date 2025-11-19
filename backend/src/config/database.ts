@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { logger } from './logger';
 import { getConfig } from './environment';
+import { RETRY } from '../constants';
 
 /**
  * MongoDB connection options
@@ -27,12 +28,12 @@ const getConnectionOptions = (): mongoose.ConnectOptions => {
 /**
  * Maximum number of connection retry attempts
  */
-const MAX_RETRIES = 5;
+const MAX_RETRIES = RETRY.DB_MAX_ATTEMPTS;
 
 /**
  * Delay between retry attempts in milliseconds
  */
-const RETRY_DELAY = 5000;
+const RETRY_DELAY = RETRY.DB_DELAY;
 
 /**
  * Establishes connection to MongoDB with retry logic
