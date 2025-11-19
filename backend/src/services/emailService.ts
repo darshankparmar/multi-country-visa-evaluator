@@ -3,6 +3,8 @@ import { logger } from '../config/logger';
 import { getConfig } from '../config/environment';
 import { MarkdownGenerator } from './markdownGenerator';
 import { IEvaluation } from '../types/evaluation.types';
+import { validateEmailAddress } from '../utils/emailValidator';
+import { ValidationError } from '../utils/errors';
 
 /**
  * Parameters for sending evaluation result emails
@@ -90,6 +92,18 @@ export class EmailService {
     }
 
     const { email, name, score, summary, evaluationId, recommendations, conclusion, evaluation } = params;
+
+    // Validate email address for injection attempts (defense in depth)
+    try {
+      validateEmailAddress(email);
+    } catch (error) {
+      logger.error('Email validation failed - potential injection attempt', {
+        email,
+        evaluationId,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+      throw new ValidationError('Invalid email address');
+    }
 
     try {
       const config = getConfig();
