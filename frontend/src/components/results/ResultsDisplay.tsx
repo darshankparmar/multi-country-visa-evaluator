@@ -26,11 +26,11 @@ export const ResultsDisplay: React.FC<ResultsDisplayProps> = React.memo(({ evalu
 
   // State for expand/collapse sections
   const [expandedSections, setExpandedSections] = useState<SectionState>({
-    criteriaAnalysis: true,
+    criteriaAnalysis: false,
     scoreBreakdown: false,
-    summary: true,
-    recommendations: true,
-    conclusion: true,
+    summary: false,
+    recommendations: false,
+    conclusion: false,
     applicationDetails: false
   })
 
@@ -319,7 +319,7 @@ const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
                 {/* Score Text */}
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
                   <div className={`text-3xl sm:text-4xl font-bold ${getScoreColor(evaluation.results.score)}`}>
-                    {evaluation.results.score}
+                    {Math.round((evaluation.results.score + Number.EPSILON) * 100) / 100}
                   </div>
                   <div className="text-xs sm:text-sm text-gray-400 font-medium">out of 100</div>
                 </div>

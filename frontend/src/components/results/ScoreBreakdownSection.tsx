@@ -6,6 +6,13 @@ interface ScoreBreakdownSectionProps {
 }
 
 /**
+ * Helper function to round numbers to 2 decimal places for display
+ */
+const roundToTwo = (num: number): number => {
+  return Math.round((num + Number.EPSILON) * 100) / 100
+}
+
+/**
  * Component to display detailed score breakdown with penalties and criterion contributions
  */
 export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
@@ -63,7 +70,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
                 Base Score (from validation):
               </span>
               <span className="text-lg sm:text-xl font-semibold text-gray-900">
-                {scoreBreakdown.baseScore}/100
+                {roundToTwo(scoreBreakdown.baseScore)}/100
               </span>
             </div>
             
@@ -97,7 +104,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
                           </span>
                         </div>
                         <span className="font-semibold text-red-700 whitespace-nowrap">
-                          -{penalty.points} points
+                          -{roundToTwo(penalty.points)} points
                         </span>
                       </div>
                     ))}
@@ -110,7 +117,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
                     Total Penalty:
                   </span>
                   <span className="text-lg sm:text-xl font-semibold text-red-700">
-                    -{scoreBreakdown.totalPenalty}
+                    -{roundToTwo(scoreBreakdown.totalPenalty)}
                   </span>
                 </div>
               </>
@@ -122,7 +129,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
                 Final Score:
               </span>
               <span className="text-2xl sm:text-3xl font-bold text-blue-600">
-                {scoreBreakdown.adjustedScore}/100
+                {roundToTwo(scoreBreakdown.adjustedScore)}/100
               </span>
             </div>
 
@@ -151,7 +158,7 @@ export const ScoreBreakdownSection: React.FC<ScoreBreakdownSectionProps> = ({
                         {item.criterion}
                       </span>
                       <span className="text-sm text-gray-600 font-medium">
-                        {item.points}/{item.maxPoints} points ({item.percentage}%)
+                        {roundToTwo(item.points)}/{roundToTwo(item.maxPoints)} points ({roundToTwo(item.percentage)}%)
                       </span>
                     </div>
                     

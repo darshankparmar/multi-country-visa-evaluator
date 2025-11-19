@@ -135,11 +135,11 @@ export const VisaSelectionStep: React.FC<VisaSelectionStepProps> = ({ onNext, on
             {selectedVisaType.description && (
               <p className="text-sm text-gray-700 mb-3">{selectedVisaType.description}</p>
             )}
-            {selectedVisaType.processingTime && (
+            {/* {selectedVisaType.processingTime && (
               <p className="text-sm text-gray-600 mb-3">
                 <span className="font-medium">Processing Time:</span> {selectedVisaType.processingTime}
               </p>
-            )}
+            )} */}
             {selectedVisaType.requiredDocuments && selectedVisaType.requiredDocuments.length > 0 && (
               <div>
                 <p className="text-sm font-medium text-gray-900 mb-2">Required Documents:</p>
