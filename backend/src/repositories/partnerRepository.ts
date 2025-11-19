@@ -1,6 +1,8 @@
 import { Partner } from '../models/Partner';
 import { IPartner } from '../types/partner.types';
 import mongoose from 'mongoose';
+import { sanitizeEmail, sanitizeQueryValue } from '../utils/sanitization';
+import { logger } from '../config/logger';
 
 /**
  * Options for listing partners
@@ -32,7 +34,14 @@ export class PartnerRepository {
    * @returns Partner document or null if not found
    */
   async findByApiKey(apiKey: string): Promise<IPartner | null> {
-    return await Partner.findOne({ apiKey }).exec();
+    // Sanitize API key to prevent injection
+    if (typeof apiKey !== 'string' || apiKey.length === 0) {
+      logger.warn('Invalid API key format', { apiKey: typeof apiKey });
+      return null;
+    }
+    
+    const sanitizedKey = sanitizeQueryValue(apiKey);
+    return await Partner.findOne({ apiKey: sanitizedKey }).exec();
   }
 
   /**
@@ -50,7 +59,14 @@ export class PartnerRepository {
    * @returns Partner document or null if not found
    */
   async findByEmail(email: string): Promise<IPartner | null> {
-    return await Partner.findOne({ email: email.toLowerCase() }).exec();
+    // Sanitize email to prevent injection
+    try {
+      const sanitizedEmail = sanitizeEmail(email);
+      return await Partner.findOne({ email: sanitizedEmail }).exec();
+    } catch (error) {
+      logger.warn('Invalid email format in findByEmail', { email });
+      return null;
+    }
   }
 
   /**
@@ -128,7 +144,13 @@ export class PartnerRepository {
    * @returns True if key exists and is active, false otherwise
    */
   async isApiKeyValid(apiKey: string): Promise<boolean> {
-    const partner = await Partner.findOne({ apiKey, active: true }).exec();
+    // Sanitize API key to prevent injection
+    if (typeof apiKey !== 'string' || apiKey.length === 0) {
+      return false;
+    }
+    
+    const sanitizedKey = sanitizeQueryValue(apiKey);
+    const partner = await Partner.findOne({ apiKey: sanitizedKey, active: true }).exec();
     return partner !== null;
   }
 
