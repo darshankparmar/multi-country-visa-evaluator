@@ -90,6 +90,74 @@ const evaluationSchema = new Schema<IEvaluation>(
       conclusion: {
         type: String,
         required: false
+      },
+      criteriaAnalysis: {
+        type: [{
+          name: { type: String, required: true },
+          rating: { 
+            type: String, 
+            enum: ['STRONG', 'GOOD', 'MODERATE', 'WEAK', 'CRITICAL_GAP'],
+            required: true 
+          },
+          evidence: { type: [String], default: [] },
+          gaps: { type: [String], default: [] },
+          recommendation: { type: String, required: false },
+          isCritical: { type: Boolean, required: true }
+        }],
+        required: false
+      },
+      prioritizedRecommendations: {
+        type: [{
+          priority: { 
+            type: String, 
+            enum: ['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'],
+            required: true 
+          },
+          text: { type: String, required: true },
+          relatedCriterion: { type: String, required: false }
+        }],
+        required: false
+      },
+      scoreBreakdown: {
+        type: {
+          baseScore: { type: Number, required: true },
+          penalties: {
+            type: [{
+              requirement: { type: String, required: true },
+              points: { type: Number, required: true },
+              reason: { type: String, required: true }
+            }],
+            default: []
+          },
+          totalPenalty: { type: Number, required: true },
+          adjustedScore: { type: Number, required: true },
+          breakdown: {
+            type: [{
+              criterion: { type: String, required: true },
+              points: { type: Number, required: true },
+              maxPoints: { type: Number, required: true },
+              percentage: { type: Number, required: true }
+            }],
+            default: []
+          }
+        },
+        required: false
+      },
+      approvalLikelihood: {
+        type: String,
+        enum: ['Strong', 'Good', 'Moderate', 'Needs Improvement', 'Low', 'Not Viable'],
+        required: false
+      },
+      validationResults: {
+        type: [{
+          criterion: { type: String, required: true },
+          met: { type: Boolean, required: true },
+          score: { type: Number, required: true },
+          maxScore: { type: Number, required: true },
+          details: { type: String, required: true },
+          isCritical: { type: Boolean, required: true }
+        }],
+        required: false
       }
     },
     partnerId: {

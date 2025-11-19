@@ -12,6 +12,18 @@ export interface IDocumentUpload {
 }
 
 /**
+ * Interface for validation result
+ */
+export interface ValidationResult {
+  criterion: string;
+  met: boolean;
+  score: number;
+  maxScore: number;
+  details: string;
+  isCritical: boolean;
+}
+
+/**
  * Interface for evaluation results
  */
 export interface IEvaluationResults {
@@ -20,6 +32,26 @@ export interface IEvaluationResults {
   evaluatedAt: Date;
   recommendations?: string[];
   conclusion?: string;
+  criteriaAnalysis?: CriterionAnalysis[];
+  prioritizedRecommendations?: PrioritizedRecommendation[];
+  scoreBreakdown?: {
+    baseScore: number;
+    penalties: Array<{
+      requirement: string;
+      points: number;
+      reason: string;
+    }>;
+    totalPenalty: number;
+    adjustedScore: number;
+    breakdown: Array<{
+      criterion: string;
+      points: number;
+      maxPoints: number;
+      percentage: number;
+    }>;
+  };
+  approvalLikelihood?: ApprovalLikelihood;
+  validationResults?: ValidationResult[];
 }
 
 /**
@@ -78,6 +110,26 @@ export interface EvaluationResponse {
     evaluatedAt: Date;
     recommendations?: string[];
     conclusion?: string;
+    criteriaAnalysis?: CriterionAnalysis[];
+    prioritizedRecommendations?: PrioritizedRecommendation[];
+    scoreBreakdown?: {
+      baseScore: number;
+      penalties: Array<{
+        requirement: string;
+        points: number;
+        reason: string;
+      }>;
+      totalPenalty: number;
+      adjustedScore: number;
+      breakdown: Array<{
+        criterion: string;
+        points: number;
+        maxPoints: number;
+        percentage: number;
+      }>;
+    };
+    approvalLikelihood?: ApprovalLikelihood;
+    validationResults?: ValidationResult[];
   };
   partnerId?: string;
   createdAt: Date;
