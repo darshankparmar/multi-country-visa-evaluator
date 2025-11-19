@@ -3,6 +3,8 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { getConfig } from '../config/environment';
 import { ValidationError } from '../utils/errors';
+import { validateFile } from '../utils/fileValidator';
+import { logger } from '../config/logger';
 
 /**
  * Represents a stored file with metadata
@@ -73,11 +75,12 @@ export class FileService {
   }
 
   /**
-   * Validates a file based on size and type
+   * Validates a file based on size, type, and content
+   * Uses magic number validation to prevent file type spoofing
    * @param file - File to validate
    * @throws {ValidationError} If file is invalid
    */
-  private validateFile(file: Express.Multer.File): void {
+  private async validateFileBasic(file: Express.Multer.File): Promise<void> {
     // Check file size
     if (file.size > this.maxFileSize) {
       throw new ValidationError(
@@ -99,6 +102,9 @@ export class FileService {
         `File ${file.originalname} has invalid type. Allowed types: PDF, DOC, DOCX, TXT, JPG, PNG`
       );
     }
+
+    // Perform deep content validation using magic numbers
+    await validateFile(file);
   }
 
   /**
@@ -162,28 +168,43 @@ export class FileService {
     const storedFiles: StoredFile[] = [];
 
     for (const file of files) {
-      // Validate file
-      this.validateFile(file);
+      try {
+        // Validate file (includes magic number validation)
+        await this.validateFileBasic(file);
 
-      // Generate unique filename (includes validation)
-      const filename = this.generateUniqueFilename(file.originalname);
-      const filePath = path.join(this.uploadDir, filename);
+        // Generate unique filename (includes validation)
+        const filename = this.generateUniqueFilename(file.originalname);
+        const filePath = path.join(this.uploadDir, filename);
 
-      // Validate the final path to prevent directory traversal
-      this.validateFilePath(filePath);
+        // Validate the final path to prevent directory traversal
+        this.validateFilePath(filePath);
 
-      // Write file to disk
-      await fs.writeFile(filePath, file.buffer);
+        // Write file to disk
+        await fs.writeFile(filePath, file.buffer);
 
-      // Add to stored files array
-      storedFiles.push({
-        filename,
-        path: filePath,
-        originalName: file.originalname,
-        size: file.size,
-        mimetype: file.mimetype,
-        uploadedAt: new Date()
-      });
+        logger.info('File stored successfully', {
+          originalName: file.originalname,
+          filename,
+          size: file.size,
+          mimetype: file.mimetype
+        });
+
+        // Add to stored files array
+        storedFiles.push({
+          filename,
+          path: filePath,
+          originalName: file.originalname,
+          size: file.size,
+          mimetype: file.mimetype,
+          uploadedAt: new Date()
+        });
+      } catch (error) {
+        logger.error('File validation or storage failed', {
+          originalName: file.originalname,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+        throw error;
+      }
     }
 
     return storedFiles;
