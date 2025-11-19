@@ -15,11 +15,14 @@ export interface SuccessResponse<T = any> {
 export interface ErrorResponse {
   status: 'error';
   message: string;
+  code?: string;
   errors?: Array<{
     field?: string;
     message: string;
   }>;
   stack?: string;
+  timestamp?: string;
+  requestId?: string;
 }
 
 /**
@@ -62,10 +65,11 @@ export function sendSuccess<T>(
 }
 
 /**
- * Send an error response
+ * Send an error response with standardized format
  * @param res - Express response object
  * @param message - Error message
  * @param statusCode - HTTP status code (default: 500)
+ * @param code - Error code for client-side handling
  * @param errors - Optional array of detailed errors
  * @param stack - Optional stack trace (only in development)
  */
@@ -73,13 +77,28 @@ export function sendError(
   res: Response,
   message: string,
   statusCode: number = 500,
+  code?: string,
   errors?: Array<{ field?: string; message: string }>,
   stack?: string
 ): void {
   const response: ErrorResponse = {
     status: 'error',
-    message
+    message,
+    timestamp: new Date().toISOString()
   };
+
+  // Add error code if provided
+  if (code) {
+    response.code = code;
+  } else {
+    // Generate default error code from status code
+    response.code = getDefaultErrorCode(statusCode);
+  }
+
+  // Add request ID if available
+  if ((res as any).locals?.requestId) {
+    response.requestId = (res as any).locals.requestId;
+  }
 
   if (errors && errors.length > 0) {
     response.errors = errors;
@@ -91,6 +110,27 @@ export function sendError(
   }
 
   res.status(statusCode).json(response);
+}
+
+/**
+ * Generate default error code from HTTP status code
+ */
+function getDefaultErrorCode(statusCode: number): string {
+  const codes: { [key: number]: string } = {
+    400: 'BAD_REQUEST',
+    401: 'UNAUTHORIZED',
+    403: 'FORBIDDEN',
+    404: 'NOT_FOUND',
+    408: 'REQUEST_TIMEOUT',
+    409: 'CONFLICT',
+    422: 'UNPROCESSABLE_ENTITY',
+    429: 'RATE_LIMIT_EXCEEDED',
+    500: 'INTERNAL_SERVER_ERROR',
+    502: 'BAD_GATEWAY',
+    503: 'SERVICE_UNAVAILABLE',
+    504: 'GATEWAY_TIMEOUT'
+  };
+  return codes[statusCode] || 'ERROR';
 }
 
 /**
@@ -159,7 +199,7 @@ export function sendValidationError(
   message: string = 'Validation failed',
   errors?: Array<{ field?: string; message: string }>
 ): void {
-  sendError(res, message, 400, errors);
+  sendError(res, message, 400, 'VALIDATION_ERROR', errors);
 }
 
 /**
@@ -169,9 +209,9 @@ export function sendValidationError(
  */
 export function sendUnauthorized(
   res: Response,
-  message: string = 'Unauthorized'
+  message: string = 'Authentication required'
 ): void {
-  sendError(res, message, 401);
+  sendError(res, message, 401, 'UNAUTHORIZED');
 }
 
 /**
@@ -181,9 +221,9 @@ export function sendUnauthorized(
  */
 export function sendForbidden(
   res: Response,
-  message: string = 'Forbidden'
+  message: string = 'Access forbidden'
 ): void {
-  sendError(res, message, 403);
+  sendError(res, message, 403, 'FORBIDDEN');
 }
 
 /**
@@ -195,7 +235,7 @@ export function sendNotFound(
   res: Response,
   resource: string = 'Resource'
 ): void {
-  sendError(res, `${resource} not found`, 404);
+  sendError(res, `${resource} not found`, 404, 'NOT_FOUND');
 }
 
 /**
@@ -207,7 +247,7 @@ export function sendConflict(
   res: Response,
   message: string
 ): void {
-  sendError(res, message, 409);
+  sendError(res, message, 409, 'CONFLICT');
 }
 
 /**
@@ -221,5 +261,5 @@ export function sendInternalError(
   message: string = 'Internal server error',
   stack?: string
 ): void {
-  sendError(res, message, 500, undefined, stack);
+  sendError(res, message, 500, 'INTERNAL_SERVER_ERROR', undefined, stack);
 }

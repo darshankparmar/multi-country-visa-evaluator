@@ -39,12 +39,28 @@ axiosInstance.interceptors.request.use(
 )
 
 /**
+ * Backend error response structure
+ */
+interface ApiErrorResponse {
+  status: 'error'
+  message: string
+  code?: string
+  errors?: Array<{
+    field?: string
+    message: string
+  }>
+  timestamp?: string
+  requestId?: string
+}
+
+/**
  * Map API errors to user-friendly messages
  * 
  * Handles various error scenarios:
  * - Network errors (no connection, timeout)
  * - HTTP status codes (400, 401, 403, 404, 500, etc.)
- * - Custom backend error messages
+ * - Custom backend error messages with error codes
+ * - Validation errors with field-specific messages
  * 
  * @param {AxiosError} error - Axios error object
  * @returns {string} User-friendly error message
@@ -63,21 +79,36 @@ const getErrorMessage = (error: AxiosError): string => {
 
   // HTTP status code errors
   const status = error.response.status
-  const data = error.response.data as { message?: string }
+  const data = error.response.data as ApiErrorResponse
 
+  // Use backend error message if available
+  if (data?.message) {
+    // For validation errors, include field-specific messages
+    if (data.errors && data.errors.length > 0) {
+      const fieldErrors = data.errors
+        .map(err => err.field ? `${err.field}: ${err.message}` : err.message)
+        .join(', ')
+      return `${data.message}. ${fieldErrors}`
+    }
+    return data.message
+  }
+
+  // Fallback messages based on status code
   switch (status) {
     case 400:
-      return data?.message || 'Invalid request. Please check your input and try again.'
+      return 'Invalid request. Please check your input and try again.'
     case 401:
       return 'Authentication required. Please log in and try again.'
     case 403:
       return 'You do not have permission to perform this action.'
     case 404:
-      return data?.message || 'The requested resource was not found.'
+      return 'The requested resource was not found.'
+    case 408:
+      return 'Request timeout. The server took too long to respond.'
     case 409:
-      return data?.message || 'A conflict occurred. The resource may already exist.'
+      return 'A conflict occurred. The resource may already exist.'
     case 422:
-      return data?.message || 'Validation failed. Please check your input.'
+      return 'Validation failed. Please check your input.'
     case 429:
       return 'Too many requests. Please wait a moment and try again.'
     case 500:
@@ -89,7 +120,7 @@ const getErrorMessage = (error: AxiosError): string => {
     case 504:
       return 'Gateway timeout. The server took too long to respond.'
     default:
-      return data?.message || `An error occurred (${status}). Please try again.`
+      return `An error occurred (${status}). Please try again.`
   }
 }
 
@@ -106,6 +137,7 @@ axiosInstance.interceptors.response.use(
   },
   (error: AxiosError) => {
     const message = getErrorMessage(error)
+    const errorData = error.response?.data as ApiErrorResponse
     
     // Log detailed error information in development
     if (import.meta.env.DEV) {
@@ -113,7 +145,11 @@ axiosInstance.interceptors.response.use(
         url: error.config?.url,
         method: error.config?.method,
         status: error.response?.status,
+        code: errorData?.code,
         message: message,
+        requestId: errorData?.requestId,
+        timestamp: errorData?.timestamp,
+        errors: errorData?.errors,
         originalError: error
       })
     }

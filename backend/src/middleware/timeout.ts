@@ -57,7 +57,8 @@ export function requestTimeout(timeoutMs: number) {
         res.status(408).json({
           status: 'error',
           message: `Request timeout: Processing exceeded ${timeoutMs / 1000} seconds`,
-          code: 'REQUEST_TIMEOUT'
+          code: 'REQUEST_TIMEOUT',
+          timestamp: new Date().toISOString()
         });
       }
     }, timeoutMs);
