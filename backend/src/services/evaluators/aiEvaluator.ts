@@ -9,6 +9,15 @@ import { sanitizeForLogging } from '../../utils/piiSanitizer';
 import { getVisaCriteria, VisaCriteriaConfig } from '../../config/visaCriteria';
 import { CriteriaValidator, ApplicantData, ValidationResult } from '../criteriaValidator';
 import { EnhancedPromptBuilder } from '../enhancedPromptBuilder';
+import { ScoringEngine, ScoreCalculation } from '../scoringEngine';
+import { 
+  StructuredEvaluationResult, 
+  CriterionAnalysis, 
+  PrioritizedRecommendation,
+  ApprovalLikelihood,
+  CriterionRating,
+  RecommendationPriority
+} from '../../types/evaluation.types';
 
 /**
  * AI-based evaluator implementation using OpenAI API
@@ -229,17 +238,18 @@ export class AIEvaluator implements IEvaluator {
   }
 
   /**
-   * Evaluate with visa-specific criteria
-   * Uses CriteriaValidator and EnhancedPromptBuilder for targeted evaluation
+   * Evaluate with visa-specific criteria (returns structured result)
+   * Uses CriteriaValidator, ScoringEngine, and EnhancedPromptBuilder for targeted evaluation
+   * Returns StructuredEvaluationResult with detailed criterion-by-criterion analysis
    */
-  private async evaluateWithVisaCriteria(
+  private async evaluateWithVisaCriteriaStructured(
     params: EvaluateParams,
     visaCriteria: VisaCriteriaConfig
-  ): Promise<EvaluationResult> {
+  ): Promise<StructuredEvaluationResult> {
     const { country, visaType, documents, userInfo } = params;
     const evaluationStartTime = Date.now();
 
-    logger.info('Starting visa-specific AI evaluation', {
+    logger.info('Starting visa-specific AI evaluation (structured)', {
       country,
       visaType,
       documentCount: documents.length,
@@ -249,28 +259,39 @@ export class AIEvaluator implements IEvaluator {
     });
 
     // If mock mode is enabled, return mock response
-    // Note: Mock mode doesn't use visa-specific logic yet, but maintains compatibility
     if (this.mockMode) {
       const scoringConfig = getScoringConfig(country, visaType);
-      const result = this.getMockEvaluation(country, visaType, scoringConfig);
+      const legacyResult = this.getMockEvaluation(country, visaType, scoringConfig);
+      
+      // Convert mock result to structured format
+      const mockStructured: StructuredEvaluationResult = {
+        score: legacyResult.score,
+        summary: legacyResult.summary,
+        conclusion: legacyResult.conclusion || 'Mock evaluation completed',
+        criteriaAnalysis: [],
+        prioritizedRecommendations: (legacyResult.recommendations || []).map((text, index) => ({
+          priority: index === 0 ? 'HIGH' : 'MEDIUM' as RecommendationPriority,
+          text,
+          relatedCriterion: undefined
+        })),
+        scoreBreakdown: {
+          baseScore: legacyResult.score,
+          penalties: [],
+          totalPenalty: 0,
+          adjustedScore: legacyResult.score,
+          breakdown: []
+        },
+        approvalLikelihood: legacyResult.score >= 70 ? 'Good' : 'Moderate'
+      };
       
       logger.info('Mock evaluation completed with visa-specific context', {
         country,
         visaType,
-        score: result.score,
+        score: mockStructured.score,
         criteriaUsed: visaCriteria.visaType
       });
       
-      this.logEvaluationCompletion({
-        country,
-        visaType,
-        result,
-        durationMs: Date.now() - evaluationStartTime,
-        mockMode: true,
-        documentCount: documents.length
-      });
-      
-      return result;
+      return mockStructured;
     }
 
     // Parse documents using existing documentParser
@@ -316,14 +337,29 @@ export class AIEvaluator implements IEvaluator {
       }))
     });
 
-    // Build visa-specific prompt using EnhancedPromptBuilder
+    // Calculate score from validation results using ScoringEngine
+    const scoringEngine = new ScoringEngine();
+    const scoreCalculation = scoringEngine.calculateScore(validationResults, visaCriteria);
+    
+    logger.info('Score calculation completed', {
+      country,
+      visaType,
+      baseScore: scoreCalculation.baseScore,
+      totalPenalty: scoreCalculation.totalPenalty,
+      adjustedScore: scoreCalculation.adjustedScore,
+      penaltiesApplied: scoreCalculation.penalties.length
+    });
+
+    // Build visa-specific prompt using EnhancedPromptBuilder with validation results
     const promptBuilder = new EnhancedPromptBuilder();
-    const prompt = promptBuilder.buildVisaSpecificPrompt(
+    const prompt = promptBuilder.buildVisaSpecificPromptWithValidation(
       country,
       visaType,
       visaCriteria,
       parsedDocuments,
-      userInfo
+      userInfo,
+      validationResults,
+      scoreCalculation
     );
 
     // Call OpenAI with enhanced prompt
@@ -352,31 +388,20 @@ export class AIEvaluator implements IEvaluator {
     // Log OpenAI API usage and cost
     this.logOpenAIUsage(response, apiDuration);
 
-    // Parse response with visa-specific logic
-    const result = this.parseVisaSpecificResponse(
+    // Parse response with structured logic
+    const structuredResult = this.parseStructuredResponse(
       response,
-      visaCriteria,
-      validationResults
+      scoreCalculation,
+      validationResults,
+      visaCriteria
     );
 
-    // Log evaluation completion metrics
-    this.logEvaluationCompletion({
+    logger.info('Visa-specific evaluation completed (structured)', {
       country,
       visaType,
-      result,
-      durationMs: Date.now() - evaluationStartTime,
-      mockMode: false,
-      documentCount: documents.length,
-      parseDurationMs: parseDuration,
-      apiDurationMs: apiDuration
-    });
-
-    logger.info('Visa-specific evaluation completed', {
-      country,
-      visaType,
-      score: result.score,
+      score: structuredResult.score,
       criteriaUsed: visaCriteria.visaType,
-      evaluationType: 'visa_specific_ai',
+      evaluationType: 'visa_specific_ai_structured',
       criteriaConfiguration: {
         salaryThresholds: visaCriteria.salaryThresholds?.length || 0,
         educationLevel: visaCriteria.educationLevel,
@@ -391,10 +416,43 @@ export class AIEvaluator implements IEvaluator {
         maxScore: r.maxScore,
         percentage: ((r.score / r.maxScore) * 100).toFixed(1) + '%'
       })),
+      structuredOutput: {
+        criteriaAnalysisCount: structuredResult.criteriaAnalysis.length,
+        prioritizedRecommendationsCount: structuredResult.prioritizedRecommendations.length,
+        approvalLikelihood: structuredResult.approvalLikelihood,
+        hasScoreBreakdown: !!structuredResult.scoreBreakdown
+      },
       performance: {
-        totalDurationMs: Date.now() - evaluationStartTime
+        totalDurationMs: Date.now() - evaluationStartTime,
+        parseDurationMs: parseDuration,
+        apiDurationMs: apiDuration
       }
     });
+
+    return structuredResult;
+  }
+
+  /**
+   * Evaluate with visa-specific criteria (legacy method for backward compatibility)
+   * Uses CriteriaValidator and EnhancedPromptBuilder for targeted evaluation
+   * Calls the structured method and converts to legacy format
+   */
+  private async evaluateWithVisaCriteria(
+    params: EvaluateParams,
+    visaCriteria: VisaCriteriaConfig
+  ): Promise<EvaluationResult> {
+    // Call the structured method
+    const structuredResult = await this.evaluateWithVisaCriteriaStructured(params, visaCriteria);
+
+    // Convert to legacy EvaluationResult format
+    // Attach structured result as property for service layer to access
+    const result: EvaluationResult & { structuredResult?: StructuredEvaluationResult } = {
+      score: structuredResult.score,
+      summary: structuredResult.summary,
+      recommendations: structuredResult.prioritizedRecommendations.map(r => r.text),
+      conclusion: structuredResult.conclusion,
+      structuredResult // Attach the full structured result
+    };
 
     return result;
   }
@@ -728,19 +786,22 @@ Ensure all category names match exactly the categories listed above.`;
   }
 
   /**
-   * Parse visa-specific response from AI
-   * Simply parses the JSON response from AI without any modification
+   * Parse structured response from AI into StructuredEvaluationResult
+   * Validates criteriaAnalysis and prioritizedRecommendations structure
+   * Uses scoreCalculation.adjustedScore as the final score
    */
-  private parseVisaSpecificResponse(
+  private parseStructuredResponse(
     response: OpenAI.Chat.Completions.ChatCompletion,
-    visaCriteria: VisaCriteriaConfig,
-    validationResults: ValidationResult[]
-  ): EvaluationResult {
+    scoreCalculation: ScoreCalculation,
+    validationResults: ValidationResult[],
+    visaCriteria: VisaCriteriaConfig
+  ): StructuredEvaluationResult {
     const content = response.choices[0]?.message?.content || '';
 
-    logger.debug('Parsing visa-specific AI response', {
+    logger.debug('Parsing structured AI response', {
       contentLength: content.length,
-      validationResultsCount: validationResults.length
+      validationResultsCount: validationResults.length,
+      calculatedScore: scoreCalculation.adjustedScore
     });
 
     try {
@@ -752,201 +813,296 @@ Ensure all category names match exactly the categories listed above.`;
 
       const parsed = JSON.parse(jsonMatch[0]);
 
-      // Validate required fields
-      if (typeof parsed.score !== 'number' || !parsed.summary || !Array.isArray(parsed.recommendations) || !parsed.conclusion) {
-        throw new Error('Invalid JSON structure from AI');
+      // Validate required fields for structured response
+      if (!parsed.summary || !parsed.conclusion) {
+        throw new Error('Missing required fields (summary or conclusion) in AI response');
       }
 
-      logger.info('Visa-specific response parsed successfully', {
-        score: parsed.score,
+      // Validate criteriaAnalysis structure
+      if (!Array.isArray(parsed.criteriaAnalysis)) {
+        throw new Error('criteriaAnalysis must be an array');
+      }
+
+      for (const criterion of parsed.criteriaAnalysis) {
+        if (!criterion.name || !criterion.rating || !Array.isArray(criterion.evidence) || !Array.isArray(criterion.gaps)) {
+          throw new Error('Invalid criteriaAnalysis structure');
+        }
+        if (!['STRONG', 'GOOD', 'MODERATE', 'WEAK', 'CRITICAL_GAP'].includes(criterion.rating)) {
+          throw new Error(`Invalid rating: ${criterion.rating}`);
+        }
+      }
+
+      // Validate prioritizedRecommendations structure
+      if (!Array.isArray(parsed.prioritizedRecommendations)) {
+        throw new Error('prioritizedRecommendations must be an array');
+      }
+
+      for (const rec of parsed.prioritizedRecommendations) {
+        if (!rec.priority || !rec.text) {
+          throw new Error('Invalid prioritizedRecommendations structure');
+        }
+        if (!['CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].includes(rec.priority)) {
+          throw new Error(`Invalid priority: ${rec.priority}`);
+        }
+      }
+
+      logger.info('Structured response parsed successfully', {
+        score: scoreCalculation.adjustedScore,
+        criteriaAnalysisCount: parsed.criteriaAnalysis.length,
+        recommendationCount: parsed.prioritizedRecommendations.length,
         summaryLength: parsed.summary.length,
-        recommendationCount: parsed.recommendations.length,
         hasConclusion: !!parsed.conclusion
       });
 
-      // Return the AI response directly without any modification
+      // Calculate approval likelihood
+      const approvalLikelihood = this.calculateApprovalLikelihood(
+        scoreCalculation.adjustedScore,
+        validationResults,
+        visaCriteria
+      );
+
+      // Return structured evaluation result using calculated score
       return {
-        score: Math.round(Math.max(0, Math.min(100, parsed.score))),
+        score: Math.round(scoreCalculation.adjustedScore),
+        criteriaAnalysis: parsed.criteriaAnalysis,
+        prioritizedRecommendations: parsed.prioritizedRecommendations,
         summary: parsed.summary,
-        recommendations: parsed.recommendations,
-        conclusion: parsed.conclusion
+        conclusion: parsed.conclusion,
+        scoreBreakdown: {
+          baseScore: scoreCalculation.baseScore,
+          penalties: scoreCalculation.penalties,
+          totalPenalty: scoreCalculation.totalPenalty,
+          adjustedScore: scoreCalculation.adjustedScore,
+          breakdown: scoreCalculation.breakdown
+        },
+        approvalLikelihood
       };
     } catch (error) {
-      logger.error('Failed to parse AI JSON response', {
+      logger.error('Failed to parse structured AI response, using fallback', {
         error: error instanceof Error ? error.message : 'Unknown error',
         contentPreview: content.substring(0, 200)
       });
 
-      // Fallback: calculate score from validation and generate basic response
-      const score = this.calculateVisaSpecificScore(validationResults, visaCriteria);
-      const recommendations = this.generateRecommendationsFromValidation(validationResults, visaCriteria);
-
-      return {
-        score,
-        summary: `Evaluation for ${visaCriteria.country} - ${visaCriteria.visaType}.\n\n${visaCriteria.description}\n\nNote: AI response parsing failed. Please review the recommendations below.`,
-        recommendations,
-        conclusion: score >= 70 ? 'Application shows potential. Address the recommendations to improve your chances.' : 'Application needs improvement. Focus on meeting the mandatory requirements.'
-      };
+      // Fallback: generate structured output from validation results
+      return this.generateFallbackStructuredResponse(
+        scoreCalculation,
+        validationResults,
+        visaCriteria
+      );
     }
   }
 
+
+
+
+
   /**
-   * Calculate score based on validation results and visa-specific weights
+   * Calculate approval likelihood based on score and critical requirements met
+   * 80-100: "Strong", 60-79: "Good", 40-59: "Moderate", 20-39: "Needs Improvement", 0-19: "Low"
+   * Override to "Not Viable" if multiple critical requirements missing
    */
-  private calculateVisaSpecificScore(
+  private calculateApprovalLikelihood(
+    score: number,
     validationResults: ValidationResult[],
-    visaCriteria: VisaCriteriaConfig
-  ): number {
-    if (validationResults.length === 0) {
-      logger.warn('No validation results to calculate score from', {
-        visaType: visaCriteria.visaType,
-        country: visaCriteria.country
-      });
-      return 50;
-    }
+    _visaCriteria: VisaCriteriaConfig
+  ): ApprovalLikelihood {
+    // Count missing critical requirements
+    const criticalResults = validationResults.filter(r => r.isCritical);
+    const missingCritical = criticalResults.filter(r => !r.met).length;
 
-    // Use visa-specific weights if available
-    const weights = visaCriteria.criteriaWeights || {
-      salary: 35,
-      education: 30,
-      experience: 20,
-      documentation: 10,
-      other: 5
-    };
-
-    logger.info('Calculating visa-specific score with criteria weights', {
-      visaType: visaCriteria.visaType,
-      country: visaCriteria.country,
-      weights,
-      validationResultCount: validationResults.length
+    logger.debug('Calculating approval likelihood', {
+      score,
+      totalCriticalRequirements: criticalResults.length,
+      missingCriticalRequirements: missingCritical
     });
 
-    let totalScore = 0;
-    let totalWeight = 0;
-    const scoreContributions: Array<{
-      criterion: string;
-      weight: number;
-      normalizedScore: number;
-      weightedScore: number;
-      contribution: string;
-    }> = [];
+    // Override to "Not Viable" if multiple critical requirements are missing
+    if (missingCritical >= 2) {
+      logger.info('Approval likelihood: Not Viable (multiple critical requirements missing)', {
+        missingCritical,
+        score
+      });
+      return 'Not Viable';
+    }
 
-    // Map validation results to weights
-    for (const result of validationResults) {
-      let weight = 0;
+    // Calculate based on score ranges
+    let likelihood: ApprovalLikelihood;
+    
+    if (score >= 80) {
+      likelihood = 'Strong';
+    } else if (score >= 60) {
+      likelihood = 'Good';
+    } else if (score >= 40) {
+      likelihood = 'Moderate';
+    } else if (score >= 20) {
+      likelihood = 'Needs Improvement';
+    } else {
+      likelihood = 'Low';
+    }
+
+    // Downgrade if one critical requirement is missing
+    if (missingCritical === 1) {
+      if (likelihood === 'Strong') {
+        likelihood = 'Good';
+      } else if (likelihood === 'Good') {
+        likelihood = 'Moderate';
+      } else if (likelihood === 'Moderate') {
+        likelihood = 'Needs Improvement';
+      }
       
-      if (result.criterion.toLowerCase().includes('salary')) {
-        weight = weights.salary;
-      } else if (result.criterion.toLowerCase().includes('education')) {
-        weight = weights.education;
-      } else if (result.criterion.toLowerCase().includes('experience')) {
-        weight = weights.experience;
+      logger.info('Approval likelihood downgraded due to missing critical requirement', {
+        originalLikelihood: likelihood,
+        missingCritical: 1
+      });
+    }
+
+    logger.info('Approval likelihood calculated', {
+      score,
+      likelihood,
+      missingCriticalRequirements: missingCritical
+    });
+
+    return likelihood;
+  }
+
+  /**
+   * Generate fallback structured response when AI doesn't return proper JSON
+   * Maps validation results to criteriaAnalysis and generates prioritized recommendations
+   */
+  private generateFallbackStructuredResponse(
+    scoreCalculation: ScoreCalculation,
+    validationResults: ValidationResult[],
+    visaCriteria: VisaCriteriaConfig
+  ): StructuredEvaluationResult {
+    logger.info('Generating fallback structured response from validation results', {
+      validationResultsCount: validationResults.length,
+      adjustedScore: scoreCalculation.adjustedScore
+    });
+
+    // Map validation results to criteriaAnalysis
+    const criteriaAnalysis: CriterionAnalysis[] = validationResults.map(result => {
+      // Determine rating based on score and whether it's met
+      let rating: CriterionRating;
+      if (!result.met && result.isCritical) {
+        rating = 'CRITICAL_GAP';
+      } else if (!result.met) {
+        rating = 'WEAK';
       } else {
-        weight = weights.other;
+        const percentage = (result.score / result.maxScore) * 100;
+        if (percentage >= 90) {
+          rating = 'STRONG';
+        } else if (percentage >= 70) {
+          rating = 'GOOD';
+        } else {
+          rating = 'MODERATE';
+        }
       }
 
-      // Calculate weighted score for this criterion
-      const normalizedScore = (result.score / result.maxScore) * 100;
-      const weightedScore = (normalizedScore * weight) / 100;
-      
-      totalScore += weightedScore;
-      totalWeight += weight;
-
-      scoreContributions.push({
-        criterion: result.criterion,
-        weight,
-        normalizedScore: parseFloat(normalizedScore.toFixed(1)),
-        weightedScore: parseFloat(weightedScore.toFixed(1)),
-        contribution: `${result.criterion}: ${normalizedScore.toFixed(1)}% × ${weight}% weight = ${weightedScore.toFixed(1)} points`
-      });
-
-      logger.debug('Criterion score contribution calculated', {
-        criterion: result.criterion,
-        rawScore: result.score,
-        maxScore: result.maxScore,
-        normalizedScore: normalizedScore.toFixed(1),
-        weight,
-        weightedScore: weightedScore.toFixed(1),
-        met: result.met
-      });
-    }
-
-    // Add base score for remaining weight (documentation and other factors)
-    const remainingWeight = 100 - totalWeight;
-    if (remainingWeight > 0) {
-      // Assume 70% score for documentation/other factors
-      const baseScore = (70 * remainingWeight) / 100;
-      totalScore += baseScore;
-      
-      scoreContributions.push({
-        criterion: 'Documentation & Other',
-        weight: remainingWeight,
-        normalizedScore: 70,
-        weightedScore: parseFloat(baseScore.toFixed(1)),
-        contribution: `Documentation & Other: 70% × ${remainingWeight}% weight = ${baseScore.toFixed(1)} points`
-      });
-      
-      logger.debug('Base score added for remaining criteria', {
-        remainingWeight,
-        assumedScore: 70,
-        baseScore: baseScore.toFixed(1)
-      });
-    }
-
-    const finalScore = Math.round(Math.max(0, Math.min(100, totalScore)));
-
-    // Log comprehensive score calculation summary
-    logger.info('Visa-specific score calculation complete', {
-      visaType: visaCriteria.visaType,
-      country: visaCriteria.country,
-      finalScore,
-      rawScore: totalScore.toFixed(2),
-      totalWeightUsed: totalWeight,
-      scoreBreakdown: scoreContributions,
-      validationSummary: validationResults.map(r => ({
-        criterion: r.criterion,
-        met: r.met,
-        score: r.score,
-        maxScore: r.maxScore
-      }))
+      return {
+        name: result.criterion,
+        rating,
+        evidence: result.evidence || [],
+        gaps: !result.met ? [result.details] : [],
+        recommendation: result.recommendation,
+        isCritical: result.isCritical || false
+      };
     });
 
-    return finalScore;
-  }
+    // Generate prioritized recommendations from validation failures
+    const prioritizedRecommendations: PrioritizedRecommendation[] = [];
 
-  /**
-   * Generate recommendations based on validation results
-   */
-  private generateRecommendationsFromValidation(
-    validationResults: ValidationResult[],
-    visaCriteria: VisaCriteriaConfig
-  ): string[] {
-    const recommendations: string[] = [];
-
-    // Add recommendations for failed criteria
-    const failedCriteria = validationResults.filter(r => !r.met && r.recommendation);
-    
-    for (const result of failedCriteria) {
+    // Add recommendations for failed critical requirements
+    const failedCritical = validationResults.filter(r => !r.met && r.isCritical);
+    for (const result of failedCritical) {
       if (result.recommendation) {
-        recommendations.push(result.recommendation);
+        prioritizedRecommendations.push({
+          priority: 'CRITICAL',
+          text: result.recommendation,
+          relatedCriterion: result.criterion
+        });
+      }
+    }
+
+    // Add recommendations for failed non-critical requirements
+    const failedNonCritical = validationResults.filter(r => !r.met && !r.isCritical);
+    for (const result of failedNonCritical) {
+      if (result.recommendation) {
+        prioritizedRecommendations.push({
+          priority: 'HIGH',
+          text: result.recommendation,
+          relatedCriterion: result.criterion
+        });
       }
     }
 
     // Add general recommendations based on visa type
     if (visaCriteria.laborMarketTestRequired) {
-      recommendations.push('Ensure employer completes the labor market test as required for this visa type');
+      prioritizedRecommendations.push({
+        priority: 'MEDIUM',
+        text: 'Ensure employer completes the labor market test as required for this visa type',
+        relatedCriterion: 'Labor Market Test'
+      });
     }
 
     if (visaCriteria.sponsorRequired && visaCriteria.sponsorType) {
-      recommendations.push(`Verify that your employer is registered as ${visaCriteria.sponsorType}`);
+      prioritizedRecommendations.push({
+        priority: 'MEDIUM',
+        text: `Verify that your employer is registered as ${visaCriteria.sponsorType}`,
+        relatedCriterion: 'Sponsor'
+      });
     }
 
     // Add documentation recommendation
-    recommendations.push('Ensure all supporting documents are complete, certified, and translated if necessary');
+    prioritizedRecommendations.push({
+      priority: 'LOW',
+      text: 'Ensure all supporting documents are complete, certified, and translated if necessary',
+      relatedCriterion: 'Documentation'
+    });
 
-    // Limit to top 5 recommendations
-    return recommendations.slice(0, 5);
+    // Generate summary
+    const criteriaMet = validationResults.filter(r => r.met).length;
+    const totalCriteria = validationResults.length;
+    const summary = `# Evaluation for ${visaCriteria.country} - ${visaCriteria.visaType}
+
+${visaCriteria.description}
+
+## Validation Summary
+
+${criteriaMet} out of ${totalCriteria} criteria met.
+
+${validationResults.map(r => `- **${r.criterion}**: ${r.met ? '✓ MET' : '✗ NOT MET'} - ${r.details}`).join('\n')}
+
+**Note:** AI analysis was unavailable. This evaluation is based on automated validation of your documents against visa requirements.`;
+
+    // Generate conclusion
+    const approvalLikelihood = this.calculateApprovalLikelihood(
+      scoreCalculation.adjustedScore,
+      validationResults,
+      visaCriteria
+    );
+
+    const conclusion = scoreCalculation.adjustedScore >= 70
+      ? `Your application shows potential with a score of ${Math.round(scoreCalculation.adjustedScore)}/100. Address the recommendations above to improve your chances of approval.`
+      : `Your application needs improvement with a score of ${Math.round(scoreCalculation.adjustedScore)}/100. Focus on meeting the mandatory requirements listed in the recommendations.`;
+
+    return {
+      score: Math.round(scoreCalculation.adjustedScore),
+      criteriaAnalysis,
+      prioritizedRecommendations,
+      summary,
+      conclusion,
+      scoreBreakdown: {
+        baseScore: scoreCalculation.baseScore,
+        penalties: scoreCalculation.penalties,
+        totalPenalty: scoreCalculation.totalPenalty,
+        adjustedScore: scoreCalculation.adjustedScore,
+        breakdown: scoreCalculation.breakdown
+      },
+      approvalLikelihood
+    };
   }
+
+
 
   /**
    * Call OpenAI API with retry logic and exponential backoff
