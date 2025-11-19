@@ -24,6 +24,14 @@ export interface ValidationResult {
   details: string
   /** Optional recommendation for improvement if criterion not met */
   recommendation?: string
+  /** Whether this is a critical requirement for the visa type */
+  isCritical?: boolean
+  /** Specific evidence extracted from documents */
+  evidence?: string[]
+  /** Source document filename where evidence was found */
+  sourceDocument?: string
+  /** Reason why requirement is missing or not met */
+  missingReason?: 'not_found' | 'insufficient' | 'not_applicable'
 }
 
 /**
@@ -70,6 +78,8 @@ export class CriteriaValidator {
    * @param thresholds - Array of salary thresholds from visa criteria
    * @param applicantAge - Optional age for age-based thresholds
    * @param occupation - Optional occupation for occupation-based thresholds
+   * @param visaCriteria - Optional visa criteria config to check for critical requirements
+   * @param sourceDocument - Optional source document filename where salary was found
    * @returns ValidationResult with score and details
    */
   validateSalary(
@@ -78,9 +88,14 @@ export class CriteriaValidator {
     salaryPeriod: 'annual' | 'monthly' | undefined,
     thresholds: SalaryThreshold[],
     applicantAge?: number,
-    occupation?: string
+    occupation?: string,
+    visaCriteria?: VisaCriteriaConfig,
+    sourceDocument?: string
   ): ValidationResult {
     const maxScore = 100
+    
+    // Check if salary is a critical requirement
+    const isCritical = visaCriteria?.criticalRequirements?.requirements.includes('salary') ?? false
 
     // If no salary data provided
     if (offeredSalary === undefined || !salaryCurrency || !salaryPeriod) {
@@ -91,19 +106,32 @@ export class CriteriaValidator {
         score: 0,
         maxScore,
         details: 'Salary information not found in documents',
-        recommendation: 'Please provide a job offer letter or employment contract with clear salary details'
+        recommendation: 'Please provide a job offer letter or employment contract with clear salary details',
+        isCritical,
+        evidence: [],
+        missingReason: 'not_found'
       }
     }
 
     // If no thresholds defined, salary requirement is not applicable
     if (!thresholds || thresholds.length === 0) {
       logger.debug('Salary validation: no thresholds defined')
+      
+      // Build evidence array
+      const evidence = [
+        `Salary: ${salaryCurrency} ${offeredSalary.toLocaleString()} ${salaryPeriod}`
+      ]
+      
       return {
         criterion: 'Salary',
         met: true,
         score: maxScore,
         maxScore,
-        details: 'No specific salary requirement for this visa type'
+        details: 'No specific salary requirement for this visa type',
+        isCritical,
+        evidence,
+        sourceDocument,
+        missingReason: 'not_applicable'
       }
     }
 
@@ -167,13 +195,23 @@ export class CriteriaValidator {
 
     if (!applicableThreshold) {
       logger.warn('Salary validation: no applicable threshold found')
+      
+      // Build evidence array
+      const evidence = [
+        `Salary: ${salaryCurrency} ${offeredSalary.toLocaleString()} ${salaryPeriod}`
+      ]
+      
       return {
         criterion: 'Salary',
         met: false,
         score: 0,
         maxScore,
         details: 'Unable to determine applicable salary threshold',
-        recommendation: 'Please verify visa requirements and provide additional context'
+        recommendation: 'Please verify visa requirements and provide additional context',
+        isCritical,
+        evidence,
+        sourceDocument,
+        missingReason: 'not_applicable'
       }
     }
 
@@ -211,6 +249,13 @@ export class CriteriaValidator {
       ? undefined
       : `Increase salary to at least ${formatAmount(applicableThreshold.amount, applicableThreshold.currency, applicableThreshold.period)} to meet visa requirements${applicableThreshold.conditions ? ` (${applicableThreshold.conditions})` : ''}`
 
+    // Build evidence array
+    const evidence = [
+      `Offered salary: ${formatAmount(offeredSalary, salaryCurrency, salaryPeriod)}`,
+      `Required threshold: ${formatAmount(applicableThreshold.amount, applicableThreshold.currency, applicableThreshold.period)}${applicableThreshold.conditions ? ` (${applicableThreshold.conditions})` : ''}`,
+      `Percentage of threshold: ${percentageOfThreshold.toFixed(1)}%`
+    ]
+
     logger.info('Salary validation complete', {
       criterion: 'Salary',
       offeredSalary,
@@ -224,7 +269,8 @@ export class CriteriaValidator {
       score,
       maxScore,
       percentageOfThreshold: percentageOfThreshold.toFixed(1),
-      hasRecommendation: !!recommendation
+      hasRecommendation: !!recommendation,
+      isCritical
     })
 
     return {
@@ -233,7 +279,11 @@ export class CriteriaValidator {
       score,
       maxScore,
       details,
-      recommendation
+      recommendation,
+      isCritical,
+      evidence,
+      sourceDocument,
+      missingReason: met ? undefined : 'insufficient'
     }
   }
 
@@ -247,25 +297,40 @@ export class CriteriaValidator {
    * @param requiredLevel - Required education level from visa criteria
    * @param alternativeQualification - Alternative qualification description
    * @param experienceYears - Years of experience (for alternative qualification)
+   * @param visaCriteria - Optional visa criteria config to check for critical requirements
+   * @param sourceDocument - Optional source document filename where education was found
    * @returns ValidationResult with details
    */
   validateEducation(
     applicantEducation: string | undefined,
     requiredLevel: string | undefined,
     alternativeQualification?: string,
-    experienceYears?: number
+    experienceYears?: number,
+    visaCriteria?: VisaCriteriaConfig,
+    sourceDocument?: string
   ): ValidationResult {
     const maxScore = 100
+    
+    // Check if education is a critical requirement
+    const isCritical = visaCriteria?.criticalRequirements?.requirements.includes('education') ?? false
 
     // If no education requirement
     if (!requiredLevel || requiredLevel === 'None') {
       logger.debug('Education validation: no education requirement')
+      
+      // Build evidence if education data is available
+      const evidence = applicantEducation ? [`Education level: ${applicantEducation}`] : []
+      
       return {
         criterion: 'Education',
         met: true,
         score: maxScore,
         maxScore,
-        details: 'No specific education requirement for this visa type'
+        details: 'No specific education requirement for this visa type',
+        isCritical,
+        evidence,
+        sourceDocument,
+        missingReason: 'not_applicable'
       }
     }
 
@@ -275,13 +340,21 @@ export class CriteriaValidator {
       
       // Check if alternative qualification might apply
       if (alternativeQualification && experienceYears !== undefined && experienceYears >= 5) {
+        const evidence = [
+          `Experience: ${experienceYears} years`,
+          `Alternative qualification: ${alternativeQualification}`
+        ]
+        
         return {
           criterion: 'Education',
           met: true,
           score: maxScore * 0.8, // Slightly lower score for alternative path
           maxScore,
           details: `Education level not specified, but ${experienceYears} years of experience may qualify under alternative qualification: ${alternativeQualification}`,
-          recommendation: 'Verify that your experience meets the alternative qualification requirements'
+          recommendation: 'Verify that your experience meets the alternative qualification requirements',
+          isCritical,
+          evidence,
+          sourceDocument
         }
       }
 
@@ -291,7 +364,10 @@ export class CriteriaValidator {
         score: 0,
         maxScore,
         details: 'Education information not found in documents',
-        recommendation: `Please provide proof of ${requiredLevel} degree or equivalent qualification`
+        recommendation: `Please provide proof of ${requiredLevel} degree or equivalent qualification`,
+        isCritical,
+        evidence: [],
+        missingReason: 'not_found'
       }
     }
 
@@ -364,6 +440,16 @@ export class CriteriaValidator {
       }
     }
 
+    // Build evidence array
+    const evidence: string[] = []
+    if (normalizedApplicant) {
+      evidence.push(`Education level: ${normalizedApplicant}`)
+    }
+    evidence.push(`Required level: ${normalizedRequired}`)
+    if (alternativeQualification && experienceYears !== undefined) {
+      evidence.push(`Experience: ${experienceYears} years (alternative qualification available)`)
+    }
+
     logger.info('Education validation complete', {
       criterion: 'Education',
       applicantEducation: normalizedApplicant || 'Not specified',
@@ -374,7 +460,8 @@ export class CriteriaValidator {
       score,
       maxScore,
       usedAlternativeQualification: alternativeQualification && experienceYears !== undefined && !met,
-      hasRecommendation: !!recommendation
+      hasRecommendation: !!recommendation,
+      isCritical
     })
 
     return {
@@ -383,7 +470,11 @@ export class CriteriaValidator {
       score,
       maxScore,
       details,
-      recommendation
+      recommendation,
+      isCritical,
+      evidence,
+      sourceDocument,
+      missingReason: met ? undefined : 'insufficient'
     }
   }
 
@@ -394,23 +485,40 @@ export class CriteriaValidator {
    * 
    * @param applicantExperience - Years of professional experience
    * @param requiredYears - Minimum years required from visa criteria
+   * @param visaCriteria - Optional visa criteria config to check for critical requirements
+   * @param sourceDocument - Optional source document filename where experience was found
    * @returns ValidationResult with recommendation
    */
   validateExperience(
     applicantExperience: number | undefined,
-    requiredYears: number | undefined
+    requiredYears: number | undefined,
+    visaCriteria?: VisaCriteriaConfig,
+    sourceDocument?: string
   ): ValidationResult {
     const maxScore = 100
+    
+    // Check if experience is a critical requirement
+    const isCritical = visaCriteria?.criticalRequirements?.requirements.includes('experience') ?? false
 
     // If no experience requirement
     if (requiredYears === undefined || requiredYears === 0) {
       logger.debug('Experience validation: no experience requirement')
+      
+      // Build evidence if experience data is available
+      const evidence = applicantExperience !== undefined 
+        ? [`Experience: ${applicantExperience} years`] 
+        : []
+      
       return {
         criterion: 'Experience',
         met: true,
         score: maxScore,
         maxScore,
-        details: 'No specific experience requirement for this visa type'
+        details: 'No specific experience requirement for this visa type',
+        isCritical,
+        evidence,
+        sourceDocument,
+        missingReason: 'not_applicable'
       }
     }
 
@@ -423,7 +531,10 @@ export class CriteriaValidator {
         score: 0,
         maxScore,
         details: 'Work experience information not found in documents',
-        recommendation: `Please provide proof of at least ${requiredYears} year${requiredYears !== 1 ? 's' : ''} of relevant professional experience`
+        recommendation: `Please provide proof of at least ${requiredYears} year${requiredYears !== 1 ? 's' : ''} of relevant professional experience`,
+        isCritical,
+        evidence: [],
+        missingReason: 'not_found'
       }
     }
 
@@ -458,6 +569,20 @@ export class CriteriaValidator {
       recommendation = `Gain at least ${shortfall.toFixed(1)} more year${shortfall !== 1 ? 's' : ''} of relevant professional experience to meet visa requirements`
     }
 
+    // Build evidence array
+    const evidence: string[] = [
+      `Experience: ${applicantExperience} year${applicantExperience !== 1 ? 's' : ''}`,
+      `Required: ${requiredYears} year${requiredYears !== 1 ? 's' : ''}`
+    ]
+    
+    if (met && applicantExperience > requiredYears) {
+      const excessYears = applicantExperience - requiredYears
+      evidence.push(`Exceeds requirement by ${excessYears.toFixed(1)} year${excessYears !== 1 ? 's' : ''}`)
+    } else if (!met) {
+      const shortfall = requiredYears - applicantExperience
+      evidence.push(`Short by ${shortfall.toFixed(1)} year${shortfall !== 1 ? 's' : ''}`)
+    }
+
     logger.info('Experience validation complete', {
       criterion: 'Experience',
       applicantExperience: applicantExperience !== undefined ? applicantExperience : 'Not specified',
@@ -467,7 +592,8 @@ export class CriteriaValidator {
       maxScore,
       excessYears: met ? (applicantExperience! - requiredYears).toFixed(1) : undefined,
       shortfall: !met && applicantExperience !== undefined ? (requiredYears - applicantExperience).toFixed(1) : undefined,
-      hasRecommendation: !!recommendation
+      hasRecommendation: !!recommendation,
+      isCritical
     })
 
     return {
@@ -476,7 +602,11 @@ export class CriteriaValidator {
       score,
       maxScore,
       details,
-      recommendation
+      recommendation,
+      isCritical,
+      evidence,
+      sourceDocument,
+      missingReason: met ? undefined : 'insufficient'
     }
   }
 
@@ -497,7 +627,8 @@ export class CriteriaValidator {
     logger.info('Starting comprehensive criteria validation', {
       country: visaCriteria.country,
       visaType: visaCriteria.visaType,
-      applicant: applicantData.name
+      applicant: applicantData.name,
+      criticalRequirements: visaCriteria.criticalRequirements?.requirements || []
     })
 
     const results: ValidationResult[] = []
@@ -510,7 +641,9 @@ export class CriteriaValidator {
         applicantData.salaryPeriod,
         visaCriteria.salaryThresholds,
         applicantData.age,
-        applicantData.occupation
+        applicantData.occupation,
+        visaCriteria,
+        undefined // sourceDocument - would be set by document parser
       )
       results.push(salaryResult)
       
@@ -518,7 +651,8 @@ export class CriteriaValidator {
         criterion: 'Salary',
         met: salaryResult.met,
         score: salaryResult.score,
-        maxScore: salaryResult.maxScore
+        maxScore: salaryResult.maxScore,
+        isCritical: salaryResult.isCritical
       })
     }
 
@@ -528,7 +662,9 @@ export class CriteriaValidator {
         applicantData.education,
         visaCriteria.educationLevel,
         visaCriteria.alternativeQualification,
-        applicantData.experienceYears
+        applicantData.experienceYears,
+        visaCriteria,
+        undefined // sourceDocument - would be set by document parser
       )
       results.push(educationResult)
       
@@ -536,7 +672,8 @@ export class CriteriaValidator {
         criterion: 'Education',
         met: educationResult.met,
         score: educationResult.score,
-        maxScore: educationResult.maxScore
+        maxScore: educationResult.maxScore,
+        isCritical: educationResult.isCritical
       })
     }
 
@@ -544,7 +681,9 @@ export class CriteriaValidator {
     if (visaCriteria.experienceYears !== undefined && visaCriteria.experienceYears > 0) {
       const experienceResult = this.validateExperience(
         applicantData.experienceYears,
-        visaCriteria.experienceYears
+        visaCriteria.experienceYears,
+        visaCriteria,
+        undefined // sourceDocument - would be set by document parser
       )
       results.push(experienceResult)
       
@@ -552,7 +691,8 @@ export class CriteriaValidator {
         criterion: 'Experience',
         met: experienceResult.met,
         score: experienceResult.score,
-        maxScore: experienceResult.maxScore
+        maxScore: experienceResult.maxScore,
+        isCritical: experienceResult.isCritical
       })
     }
 
@@ -561,6 +701,11 @@ export class CriteriaValidator {
     const totalScore = results.reduce((sum, r) => sum + r.score, 0)
     const maxTotalScore = results.reduce((sum, r) => sum + r.maxScore, 0)
     const averageScore = maxTotalScore > 0 ? (totalScore / maxTotalScore) * 100 : 0
+    
+    // Identify critical requirements and their status
+    const criticalResults = results.filter(r => r.isCritical)
+    const criticalMet = criticalResults.filter(r => r.met).length
+    const criticalNotMet = criticalResults.filter(r => !r.met)
 
     logger.info('Comprehensive validation complete', {
       country: visaCriteria.country,
@@ -568,12 +713,31 @@ export class CriteriaValidator {
       totalCriteria: results.length,
       criteriaMet: metCount,
       averageScore: averageScore.toFixed(1),
+      criticalRequirements: {
+        total: criticalResults.length,
+        met: criticalMet,
+        notMet: criticalNotMet.map(r => r.criterion)
+      },
       results: results.map(r => ({
         criterion: r.criterion,
         met: r.met,
-        score: r.score
+        score: r.score,
+        isCritical: r.isCritical
       }))
     })
+    
+    // Log warning if critical requirements are not met
+    if (criticalNotMet.length > 0) {
+      logger.warn('Critical requirements not met', {
+        country: visaCriteria.country,
+        visaType: visaCriteria.visaType,
+        criticalNotMet: criticalNotMet.map(r => ({
+          criterion: r.criterion,
+          missingReason: r.missingReason,
+          details: r.details
+        }))
+      })
+    }
 
     return results
   }
