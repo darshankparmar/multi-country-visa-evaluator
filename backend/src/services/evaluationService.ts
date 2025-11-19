@@ -96,49 +96,78 @@ export class EvaluationService {
       // Step 2: Validate required documents
       this.validateRequiredDocuments(documents, visaTypeConfig.requiredDocuments);
 
-      // Step 3: Store uploaded documents
+      // Step 3: Store uploaded documents with error handling
       logger.debug('Storing uploaded documents', { count: documents.length });
-      const storedFiles = await this.fileService.storeDocuments(documents);
+      let storedFiles;
+      try {
+        storedFiles = await this.fileService.storeDocuments(documents);
+      } catch (error) {
+        logger.error('Failed to store uploaded documents', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          documentCount: documents.length
+        });
+        throw new Error('Failed to store uploaded documents. Please try again.');
+      }
 
-      // Step 4: Create evaluation record
+      // Step 4: Create evaluation record with error handling
       logger.debug('Creating evaluation record');
-      const evaluation = await this.evaluationRepository.create({
-        userInfo: {
-          name,
-          email: email.toLowerCase()
-        },
-        visaApplication: {
-          country,
-          visaType
-        },
-        documents: storedFiles.map(file => ({
-          filename: file.filename,
-          originalName: file.originalName,
-          path: file.path,
-          uploadedAt: file.uploadedAt
-        })),
-        partnerId: partnerId ? new mongoose.Types.ObjectId(partnerId.toString()) : undefined
-      });
+      let evaluation;
+      try {
+        evaluation = await this.evaluationRepository.create({
+          userInfo: {
+            name,
+            email: email.toLowerCase()
+          },
+          visaApplication: {
+            country,
+            visaType
+          },
+          documents: storedFiles.map(file => ({
+            filename: file.filename,
+            originalName: file.originalName,
+            path: file.path,
+            uploadedAt: file.uploadedAt
+          })),
+          partnerId: partnerId ? new mongoose.Types.ObjectId(partnerId.toString()) : undefined
+        });
+      } catch (error) {
+        logger.error('Failed to create evaluation record', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          email
+        });
+        // Clean up stored files on database error
+        await this.cleanupStoredFiles(storedFiles);
+        throw new Error('Failed to create evaluation record. Please try again.');
+      }
 
       logger.info('Evaluation record created', {
         evaluationId: evaluation.evaluationId
       });
 
-      // Step 5: Generate evaluation score and summary
+      // Step 5: Generate evaluation score and summary with error handling
       logger.debug('Generating evaluation score', {
         evaluationId: evaluation.evaluationId
       });
 
-      const evaluationResult = await this.evaluator.evaluate({
-        country,
-        visaType,
-        documents: storedFiles.map(file => ({
-          filename: file.filename,
-          originalName: file.originalName,
-          path: file.path
-        })),
-        userInfo: { name, email }
-      });
+      let evaluationResult;
+      try {
+        evaluationResult = await this.evaluator.evaluate({
+          country,
+          visaType,
+          documents: storedFiles.map(file => ({
+            filename: file.filename,
+            originalName: file.originalName,
+            path: file.path
+          })),
+          userInfo: { name, email }
+        });
+      } catch (error) {
+        logger.error('Failed to generate evaluation score', {
+          error: error instanceof Error ? error.message : 'Unknown error',
+          evaluationId: evaluation.evaluationId
+        });
+        throw new Error('Failed to generate evaluation. Please try again.');
+      }
 
       // Step 6: Apply success cap
       const cappedScore = this.applySuccessCap(evaluationResult.score);
@@ -198,8 +227,8 @@ export class EvaluationService {
         throw new Error('Failed to update evaluation with results');
       }
 
-      // Step 8: Send email notification (non-blocking)
-      this.sendEmailNotification({
+      // Step 8: Send email notification (non-blocking with retry)
+      this.sendEmailNotificationWithRetry({
         email,
         name,
         score: cappedScore,
@@ -210,10 +239,13 @@ export class EvaluationService {
         evaluation: updatedEvaluation // Pass full evaluation for PDF generation
       }).catch(error => {
         // Email errors are logged but don't fail the evaluation
-        logger.error('Email notification failed', {
+        logger.error('Email notification failed after all retries', {
           error: error instanceof Error ? error.message : 'Unknown error',
-          evaluationId: evaluation.evaluationId
+          evaluationId: evaluation.evaluationId,
+          email
         });
+        // Store failed email for manual retry
+        this.storeFailedEmailNotification(evaluation.evaluationId, email, error);
       });
 
       // Step 9: Return results
@@ -346,6 +378,123 @@ export class EvaluationService {
     } catch (error) {
       // Errors are logged in emailService, just re-throw for caller to handle
       throw error;
+    }
+  }
+
+  /**
+   * Send email notification with retry logic
+   * Retries up to 3 times with exponential backoff
+   * 
+   * @param params - Email parameters
+   * @param maxRetries - Maximum number of retry attempts (default: 3)
+   */
+  private async sendEmailNotificationWithRetry(
+    params: {
+      email: string;
+      name: string;
+      score: number;
+      summary: string;
+      evaluationId: string;
+      recommendations?: string[];
+      conclusion?: string;
+      evaluation: IEvaluation;
+    },
+    maxRetries: number = 3
+  ): Promise<void> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        await this.sendEmailNotification(params);
+        
+        if (attempt > 1) {
+          logger.info('Email notification sent successfully after retry', {
+            email: params.email,
+            evaluationId: params.evaluationId,
+            attempt
+          });
+        }
+        
+        return; // Success, exit
+      } catch (error) {
+        lastError = error as Error;
+        
+        logger.warn('Email notification attempt failed', {
+          email: params.email,
+          evaluationId: params.evaluationId,
+          attempt,
+          maxRetries,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+
+        // Don't retry on the last attempt
+        if (attempt < maxRetries) {
+          // Exponential backoff: 1s, 2s, 4s
+          const delay = 1000 * Math.pow(2, attempt - 1);
+          logger.debug('Retrying email notification', {
+            evaluationId: params.evaluationId,
+            nextAttempt: attempt + 1,
+            delayMs: delay
+          });
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    // All retries failed
+    throw lastError || new Error('Email notification failed after all retries');
+  }
+
+  /**
+   * Store failed email notification for manual retry
+   * Logs the failure for monitoring and potential manual intervention
+   * 
+   * @param evaluationId - Evaluation ID
+   * @param email - Recipient email
+   * @param error - Error that occurred
+   */
+  private storeFailedEmailNotification(
+    evaluationId: string,
+    email: string,
+    error: unknown
+  ): void {
+    logger.error('Storing failed email notification for manual retry', {
+      evaluationId,
+      email,
+      error: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    });
+
+    // In a production system, you might want to:
+    // 1. Store in a database table for failed emails
+    // 2. Send to a dead letter queue
+    // 3. Trigger an alert to operations team
+    // 4. Create a ticket in your issue tracking system
+  }
+
+  /**
+   * Clean up stored files in case of error
+   * Attempts to delete files that were successfully stored before an error occurred
+   * 
+   * @param storedFiles - Array of stored file metadata
+   */
+  private async cleanupStoredFiles(storedFiles: Array<{ path: string; filename: string }>): Promise<void> {
+    logger.info('Cleaning up stored files after error', {
+      fileCount: storedFiles.length
+    });
+
+    for (const file of storedFiles) {
+      try {
+        await this.fileService.deleteDocument(file.path);
+        logger.debug('Cleaned up file', { filename: file.filename });
+      } catch (error) {
+        // Log but don't throw - cleanup is best effort
+        logger.warn('Failed to clean up file', {
+          filename: file.filename,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
     }
   }
 
