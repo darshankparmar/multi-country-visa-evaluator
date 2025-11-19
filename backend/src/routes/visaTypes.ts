@@ -3,8 +3,16 @@ import {
   listVisaTypes,
   getVisaTypesByCountry
 } from '../controllers/visaTypeController';
+import { publicReadLimiter } from '../config/rateLimits';
 
 const router = Router();
+
+/**
+ * Apply public read rate limiter to all visa type endpoints
+ * Protects against abuse while allowing reasonable access
+ * Default: 200 requests per 15 minutes per IP
+ */
+router.use(publicReadLimiter);
 
 /**
  * GET /api/visa-types

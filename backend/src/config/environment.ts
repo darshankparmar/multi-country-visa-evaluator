@@ -60,7 +60,11 @@ const envSchema = z.object({
   RATE_LIMIT_PARTNER_MAX: z.string().default('1000').transform(Number),
   RATE_LIMIT_PARTNER_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
   RATE_LIMIT_PARTNER_EVAL_MAX: z.string().default('50').transform(Number),
-  RATE_LIMIT_PARTNER_EVAL_WINDOW_MS: z.string().default('3600000').transform(Number) // 1 hour
+  RATE_LIMIT_PARTNER_EVAL_WINDOW_MS: z.string().default('3600000').transform(Number), // 1 hour
+  RATE_LIMIT_PUBLIC_READ_MAX: z.string().default('200').transform(Number),
+  RATE_LIMIT_PUBLIC_READ_WINDOW_MS: z.string().default('900000').transform(Number), // 15 minutes
+  RATE_LIMIT_DOWNLOAD_MAX: z.string().default('20').transform(Number),
+  RATE_LIMIT_DOWNLOAD_WINDOW_MS: z.string().default('900000').transform(Number) // 15 minutes
 }).refine(
   (data) => data.EVALUATOR_TYPE !== 'ai' || data.OPENAI_API_KEY,
   {

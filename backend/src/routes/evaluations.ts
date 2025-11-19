@@ -19,7 +19,9 @@ import { getConfig } from '../config/environment';
 import {
   evaluationLimiter,
   partnerApiLimiter,
-  partnerEvaluationLimiter
+  partnerEvaluationLimiter,
+  publicReadLimiter,
+  downloadLimiter
 } from '../config/rateLimits';
 
 const router = Router();
@@ -71,9 +73,11 @@ router.post(
  * 
  * - Generates and downloads Markdown report
  * - No authentication required (public access by ID)
+ * - Rate limited: 20 downloads per 15 minutes per IP
  */
 router.get(
   '/:id/download',
+  downloadLimiter, // Apply download rate limiter
   validateRequest(evaluationIdParamSchema, 'params'), // Validate UUID format
   downloadEvaluationPDF
 );
@@ -84,9 +88,11 @@ router.get(
  * 
  * - Returns complete evaluation details
  * - No authentication required (public access by ID)
+ * - Rate limited: 200 requests per 15 minutes per IP
  */
 router.get(
   '/:id',
+  publicReadLimiter, // Apply public read rate limiter
   validateRequest(evaluationIdParamSchema, 'params'), // Validate UUID format
   getEvaluation
 );
