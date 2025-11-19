@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../config/logger';
+import { sanitizePII } from '../utils/piiSanitizer';
 
 /**
  * Request logging middleware
@@ -44,6 +45,15 @@ export function requestLogger(
     logger.debug('Request body', {
       requestId,
       body: sanitizedBody
+    });
+  }
+
+  // Sanitize query parameters for logging
+  if (Object.keys(req.query).length > 0) {
+    const sanitizedQuery = sanitizeQueryParams(req.query);
+    logger.debug('Request query parameters (sanitized)', {
+      requestId,
+      query: sanitizedQuery
     });
   }
 
@@ -100,7 +110,8 @@ function sanitizeBody(body: any): any {
     'secret',
     'authorization',
     'creditCard',
-    'ssn'
+    'ssn',
+    'passport'
   ];
 
   const sanitized = { ...body };
@@ -108,6 +119,47 @@ function sanitizeBody(body: any): any {
   for (const field of sensitiveFields) {
     if (field in sanitized) {
       sanitized[field] = '***REDACTED***';
+    }
+  }
+
+  // Sanitize PII in string fields
+  for (const key in sanitized) {
+    if (typeof sanitized[key] === 'string') {
+      // Apply PII sanitization to string values
+      if (key === 'email') {
+        sanitized[key] = sanitizePII(sanitized[key]);
+      } else if (key === 'name') {
+        sanitized[key] = sanitizePII(sanitized[key]);
+      } else if (sanitized[key].length > 100) {
+        // Sanitize long text fields that might contain PII
+        sanitized[key] = sanitizePII(sanitized[key].substring(0, 200)) + '... [truncated]';
+      }
+    }
+  }
+
+  return sanitized;
+}
+
+/**
+ * Sanitize query parameters to remove PII
+ * @param query - Query parameters object
+ * @returns Sanitized query parameters
+ */
+function sanitizeQueryParams(query: any): any {
+  if (!query || typeof query !== 'object') {
+    return query;
+  }
+
+  const sanitized = { ...query };
+
+  for (const key in sanitized) {
+    if (typeof sanitized[key] === 'string') {
+      // Sanitize email and name fields
+      if (key === 'email' || key.includes('email')) {
+        sanitized[key] = sanitizePII(sanitized[key]);
+      } else if (key === 'name' || key.includes('name')) {
+        sanitized[key] = sanitizePII(sanitized[key]);
+      }
     }
   }
 

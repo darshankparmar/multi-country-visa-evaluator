@@ -103,18 +103,50 @@ export class FileService {
 
   /**
    * Generates a unique filename for storage
+   * Prevents directory traversal by strictly sanitizing the filename
    * @param originalName - Original filename
    * @returns Unique filename with timestamp and UUID
+   * @throws {ValidationError} If filename is invalid
    */
   private generateUniqueFilename(originalName: string): string {
-    const ext = path.extname(originalName);
+    // Extract extension and validate it's in allowed list
+    const ext = path.extname(originalName).toLowerCase();
+    if (!ALLOWED_EXTENSIONS.includes(ext)) {
+      throw new ValidationError(`Invalid file extension: ${ext}`);
+    }
+
     const timestamp = Date.now();
     const uuid = uuidv4().split('-')[0]; // Use first segment of UUID for brevity
-    const sanitizedName = path.basename(originalName, ext)
-      .replace(/[^a-zA-Z0-9]/g, '_')
+    
+    // Use only basename to prevent directory traversal
+    // Remove all special characters except alphanumeric, underscore, and hyphen
+    const baseName = path.basename(originalName, ext);
+    const sanitizedName = baseName
+      .replace(/[^a-zA-Z0-9_-]/g, '_')
       .substring(0, 50); // Limit length
     
+    // Ensure sanitized name is not empty
+    if (sanitizedName.length === 0) {
+      throw new ValidationError('Invalid filename - contains no valid characters');
+    }
+    
     return `${timestamp}_${uuid}_${sanitizedName}${ext}`;
+  }
+
+  /**
+   * Validates that a file path is within the upload directory
+   * Prevents directory traversal attacks
+   * @param filePath - Path to validate
+   * @throws {ValidationError} If path is outside upload directory
+   */
+  private validateFilePath(filePath: string): void {
+    const resolvedPath = path.resolve(filePath);
+    const uploadDirResolved = path.resolve(this.uploadDir);
+    
+    // Ensure the resolved path starts with the upload directory
+    if (!resolvedPath.startsWith(uploadDirResolved + path.sep) && resolvedPath !== uploadDirResolved) {
+      throw new ValidationError('Invalid file path - directory traversal detected');
+    }
   }
 
   /**
@@ -133,9 +165,12 @@ export class FileService {
       // Validate file
       this.validateFile(file);
 
-      // Generate unique filename
+      // Generate unique filename (includes validation)
       const filename = this.generateUniqueFilename(file.originalname);
       const filePath = path.join(this.uploadDir, filename);
+
+      // Validate the final path to prevent directory traversal
+      this.validateFilePath(filePath);
 
       // Write file to disk
       await fs.writeFile(filePath, file.buffer);
@@ -159,11 +194,18 @@ export class FileService {
    * @param filePath - Path to the file
    * @returns File buffer
    * @throws {Error} If file doesn't exist or can't be read
+   * @throws {ValidationError} If path is outside upload directory
    */
   async getDocument(filePath: string): Promise<Buffer> {
     try {
+      // Validate path to prevent directory traversal
+      this.validateFilePath(filePath);
+      
       return await fs.readFile(filePath);
     } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
       throw new Error(`Failed to retrieve document: ${filePath}`);
     }
   }
@@ -172,11 +214,18 @@ export class FileService {
    * Deletes a document by its path
    * @param filePath - Path to the file
    * @throws {Error} If file can't be deleted
+   * @throws {ValidationError} If path is outside upload directory
    */
   async deleteDocument(filePath: string): Promise<void> {
     try {
+      // Validate path to prevent directory traversal
+      this.validateFilePath(filePath);
+      
       await fs.unlink(filePath);
     } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
       throw new Error(`Failed to delete document: ${filePath}`);
     }
   }
@@ -185,12 +234,19 @@ export class FileService {
    * Checks if a file exists
    * @param filePath - Path to the file
    * @returns True if file exists, false otherwise
+   * @throws {ValidationError} If path is outside upload directory
    */
   async fileExists(filePath: string): Promise<boolean> {
     try {
+      // Validate path to prevent directory traversal
+      this.validateFilePath(filePath);
+      
       await fs.access(filePath);
       return true;
-    } catch {
+    } catch (error) {
+      if (error instanceof ValidationError) {
+        throw error;
+      }
       return false;
     }
   }
