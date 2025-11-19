@@ -27,10 +27,7 @@ export const ConclusionSection: React.FC<ConclusionSectionProps> = ({
     : 'bg-red-50'
 
   return (
-    <div className={`mt-6 sm:mt-8 ${bgColor} ${borderColor} border-l-4 p-4 sm:p-6`}>
-      <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-3">
-        Conclusion
-      </h2>
+    <div className={`${bgColor} ${borderColor} border-l-4 p-4 sm:p-6 rounded-lg`}>
       <p className="text-sm sm:text-base text-gray-700 leading-relaxed">
         {conclusion}
       </p>

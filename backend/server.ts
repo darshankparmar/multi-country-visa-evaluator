@@ -15,6 +15,7 @@ import { createApp } from './src/app';
 import { getConfig, validateEnv } from './src/config/environment';
 import { connectDatabase, disconnectDatabase } from './src/config/database';
 import { seedDatabase } from './src/seeders/visaTypeSeeder';
+import { validateAllVisaCriteriaConfigs } from './src/config/visaCriteria';
 import { logger } from './src/config/logger';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -53,6 +54,11 @@ async function startServer(): Promise<void> {
 
     // Ensure upload directory exists
     await ensureUploadDirectory();
+
+    // Validate visa criteria configurations
+    logger.info('Validating visa criteria configurations...');
+    validateAllVisaCriteriaConfigs();
+    logger.info('Visa criteria configurations validated');
 
     // Connect to MongoDB
     logger.info('Connecting to MongoDB...');

@@ -124,6 +124,66 @@ export class EvaluationRepository {
   }
 
   /**
+   * Update evaluation results with structured analysis
+   * @param evaluationId - Unique evaluation identifier
+   * @param results - Complete evaluation results including structured analysis
+   * @returns Updated evaluation document or null if not found
+   */
+  async updateStructuredResults(
+    evaluationId: string,
+    results: {
+      score: number;
+      summary: string;
+      recommendations?: string[];
+      conclusion?: string;
+      criteriaAnalysis?: any[];
+      prioritizedRecommendations?: any[];
+      scoreBreakdown?: any;
+      approvalLikelihood?: string;
+      validationResults?: any[];
+    }
+  ): Promise<IEvaluation | null> {
+    const updateData: any = {
+      score: results.score,
+      summary: results.summary,
+      evaluatedAt: new Date()
+    };
+
+    // Include all optional fields if provided
+    if (results.recommendations !== undefined) {
+      updateData.recommendations = results.recommendations;
+    }
+    if (results.conclusion !== undefined) {
+      updateData.conclusion = results.conclusion;
+    }
+    if (results.criteriaAnalysis !== undefined) {
+      updateData.criteriaAnalysis = results.criteriaAnalysis;
+    }
+    if (results.prioritizedRecommendations !== undefined) {
+      updateData.prioritizedRecommendations = results.prioritizedRecommendations;
+    }
+    if (results.scoreBreakdown !== undefined) {
+      updateData.scoreBreakdown = results.scoreBreakdown;
+    }
+    if (results.approvalLikelihood !== undefined) {
+      updateData.approvalLikelihood = results.approvalLikelihood;
+    }
+    if (results.validationResults !== undefined) {
+      updateData.validationResults = results.validationResults;
+    }
+
+    return await Evaluation.findOneAndUpdate(
+      { evaluationId },
+      {
+        $set: {
+          results: updateData
+        }
+      },
+      { new: true, runValidators: true }
+    ).exec();
+  }
+
+  /**
    * List evaluations with pagination and filtering
    * @param filters - Optional filters for querying evaluations
    * @param options - Pagination options

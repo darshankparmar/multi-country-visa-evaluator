@@ -169,6 +169,90 @@ curl -X POST http://localhost:3000/api/evaluations \
       "Provide certified translations for any non-English documents"
     ],
     "conclusion": "This application demonstrates good approval potential. The candidate meets most requirements with solid supporting documentation. Addressing the missing police clearance certificate would strengthen the application significantly.",
+    "criteriaAnalysis": [
+      {
+        "name": "Salary Requirement",
+        "rating": "GOOD",
+        "evidence": [
+          "Employment contract shows €45,000 annual salary",
+          "Exceeds minimum threshold of €38,000 for critical occupations"
+        ],
+        "gaps": [],
+        "recommendation": null,
+        "isCritical": true
+      },
+      {
+        "name": "Education Requirement",
+        "rating": "STRONG",
+        "evidence": [
+          "Bachelor's degree in Computer Science from recognized university",
+          "Degree certificate provided and verified"
+        ],
+        "gaps": [],
+        "recommendation": null,
+        "isCritical": true
+      },
+      {
+        "name": "Sponsor",
+        "rating": "GOOD",
+        "evidence": [
+          "Employment contract from registered Irish employer"
+        ],
+        "gaps": [],
+        "recommendation": null,
+        "isCritical": true
+      }
+    ],
+    "prioritizedRecommendations": [
+      {
+        "priority": "HIGH",
+        "text": "Obtain police clearance certificate to complete required documentation",
+        "relatedCriterion": "Documentation"
+      },
+      {
+        "priority": "MEDIUM",
+        "text": "Include additional reference letters from previous employers",
+        "relatedCriterion": "Experience"
+      },
+      {
+        "priority": "LOW",
+        "text": "Provide certified translations for any non-English documents",
+        "relatedCriterion": "Documentation"
+      }
+    ],
+    "scoreBreakdown": {
+      "baseScore": 78,
+      "penalties": [],
+      "totalPenalty": 0,
+      "adjustedScore": 78,
+      "breakdown": [
+        {
+          "criterion": "Salary Requirement",
+          "points": 35,
+          "maxPoints": 35,
+          "percentage": 100
+        },
+        {
+          "criterion": "Education Requirement",
+          "points": 25,
+          "maxPoints": 25,
+          "percentage": 100
+        },
+        {
+          "criterion": "Experience",
+          "points": 12,
+          "maxPoints": 15,
+          "percentage": 80
+        },
+        {
+          "criterion": "Documentation",
+          "points": 6,
+          "maxPoints": 15,
+          "percentage": 40
+        }
+      ]
+    },
+    "approvalLikelihood": "Good",
     "userInfo": {
       "name": "John Doe",
       "email": "john.doe@example.com"
@@ -182,7 +266,30 @@ curl -X POST http://localhost:3000/api/evaluations \
 }
 ```
 
-**Note**: The `recommendations` and `conclusion` fields are included when using AI evaluation with document parsing enabled (`EVALUATOR_TYPE=ai` and `ENABLE_DOCUMENT_PARSING=true`). For rule-based evaluation or AI without document parsing, only `score` and `summary` are returned.
+**Structured Response Fields** (Available for visa-specific evaluations):
+
+| Field | Type | Description |
+|-------|------|-------------|
+| criteriaAnalysis | array | Detailed analysis of each criterion with rating, evidence, and gaps |
+| prioritizedRecommendations | array | Recommendations sorted by priority (CRITICAL, HIGH, MEDIUM, LOW) |
+| scoreBreakdown | object | Detailed score calculation showing base score, penalties, and breakdown |
+| approvalLikelihood | string | Overall approval likelihood assessment |
+| validationResults | array | Raw validation data (not shown in response but available internally) |
+
+**Criterion Rating Values**:
+- `STRONG`: Requirement exceeded expectations
+- `GOOD`: Requirement fully met
+- `MODERATE`: Requirement partially met
+- `WEAK`: Requirement not adequately met
+- `CRITICAL_GAP`: Critical requirement missing (significantly impacts approval)
+
+**Recommendation Priority Levels**:
+- `CRITICAL`: Must be addressed for visa approval (e.g., missing LCA for H-1B)
+- `HIGH`: Important gaps that significantly impact approval chances
+- `MEDIUM`: Recommended improvements to strengthen application
+- `LOW`: Optional enhancements
+
+**Note**: Structured fields (`criteriaAnalysis`, `prioritizedRecommendations`, `scoreBreakdown`, `approvalLikelihood`) are included when the visa type has specific criteria configured (e.g., H-1B Visa, Critical Skills Employment Permit). For generic evaluations or visa types without specific criteria, only basic fields (`score`, `summary`, `recommendations`, `conclusion`) are returned.
 
 **Note**: The response does not include the `partnerId` field for privacy reasons, but the evaluation is internally associated with the partner if an API key was provided.
 
@@ -276,7 +383,62 @@ curl http://localhost:3000/api/evaluations/550e8400-e29b-41d4-a716-446655440000
         "Provide certified translations for non-English documents"
       ],
       "conclusion": "This application shows good approval potential with comprehensive documentation.",
-      "evaluatedAt": "2025-11-17T10:30:05.000Z"
+      "evaluatedAt": "2025-11-17T10:30:05.000Z",
+      "criteriaAnalysis": [
+        {
+          "name": "Salary Requirement",
+          "rating": "GOOD",
+          "evidence": ["Employment contract shows €45,000 annual salary"],
+          "gaps": [],
+          "isCritical": true
+        },
+        {
+          "name": "Education Requirement",
+          "rating": "STRONG",
+          "evidence": ["Bachelor's degree in Computer Science"],
+          "gaps": [],
+          "isCritical": true
+        }
+      ],
+      "prioritizedRecommendations": [
+        {
+          "priority": "HIGH",
+          "text": "Consider obtaining additional reference letters",
+          "relatedCriterion": "Experience"
+        },
+        {
+          "priority": "MEDIUM",
+          "text": "Include more recent financial statements",
+          "relatedCriterion": "Documentation"
+        }
+      ],
+      "scoreBreakdown": {
+        "baseScore": 78,
+        "penalties": [],
+        "totalPenalty": 0,
+        "adjustedScore": 78,
+        "breakdown": [
+          {
+            "criterion": "Salary Requirement",
+            "points": 35,
+            "maxPoints": 35,
+            "percentage": 100
+          }
+        ]
+      },
+      "approvalLikelihood": "Good",
+      "validationResults": [
+        {
+          "criterion": "Salary Requirement",
+          "met": true,
+          "score": 35,
+          "maxScore": 35,
+          "details": "Salary meets threshold requirement",
+          "isCritical": true,
+          "evidence": ["€45,000 annual salary"],
+          "sourceDocument": "employment_contract.pdf"
+        }
+      ]
     },
     "createdAt": "2025-11-17T10:30:00.000Z",
     "updatedAt": "2025-11-17T10:30:05.000Z"
@@ -284,7 +446,7 @@ curl http://localhost:3000/api/evaluations/550e8400-e29b-41d4-a716-446655440000
 }
 ```
 
-**Note**: Enhanced fields (`recommendations`, `conclusion`) are available when using AI evaluation with document parsing enabled.
+**Note**: Structured fields (`criteriaAnalysis`, `prioritizedRecommendations`, `scoreBreakdown`, `approvalLikelihood`, `validationResults`) are available when the visa type has specific criteria configured. These fields provide detailed criterion-by-criterion analysis with evidence extraction, penalty tracking, and realistic approval likelihood assessment.
 
 **Error Response** (404 Not Found):
 ```json
@@ -345,9 +507,36 @@ curl -H "x-api-key: your-api-key-here" \
           "country": "Ireland",
           "visaType": "Critical Skills Employment Permit"
         },
+        "documentCount": 3,
         "results": {
           "score": 78,
-          "summary": "Your application shows strong potential..."
+          "summary": "Your application shows strong potential...",
+          "recommendations": ["Obtain police clearance certificate"],
+          "conclusion": "Good approval potential",
+          "evaluatedAt": "2025-11-17T10:30:05.000Z",
+          "criteriaAnalysis": [
+            {
+              "name": "Salary Requirement",
+              "rating": "GOOD",
+              "evidence": ["€45,000 annual salary"],
+              "gaps": [],
+              "isCritical": true
+            }
+          ],
+          "prioritizedRecommendations": [
+            {
+              "priority": "HIGH",
+              "text": "Obtain police clearance certificate",
+              "relatedCriterion": "Documentation"
+            }
+          ],
+          "scoreBreakdown": {
+            "baseScore": 78,
+            "penalties": [],
+            "totalPenalty": 0,
+            "adjustedScore": 78
+          },
+          "approvalLikelihood": "Good"
         },
         "createdAt": "2025-11-17T10:30:00.000Z"
       }
@@ -361,6 +550,8 @@ curl -H "x-api-key: your-api-key-here" \
   }
 }
 ```
+
+**Note**: Each evaluation includes structured fields when available. The list view includes all the same structured data as the detail view for easy access to evaluation results without additional API calls.
 
 **Error Response** (401 Unauthorized):
 ```json

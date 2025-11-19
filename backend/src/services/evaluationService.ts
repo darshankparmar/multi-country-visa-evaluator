@@ -151,13 +151,48 @@ export class EvaluationService {
       });
 
       // Step 7: Update evaluation with results
-      const updatedEvaluation = await this.evaluationRepository.updateResults(
-        evaluation.evaluationId,
-        cappedScore,
-        evaluationResult.summary,
-        evaluationResult.recommendations,
-        evaluationResult.conclusion
-      );
+      let updatedEvaluation: IEvaluation | null;
+      
+      // Check if evaluationResult has structured data (from visa-specific evaluation)
+      const structuredResult = (evaluationResult as any).structuredResult;
+      
+      if (structuredResult) {
+        // Use structured update method to save all enhanced fields
+        logger.debug('Updating evaluation with structured results', {
+          evaluationId: evaluation.evaluationId,
+          hasCriteriaAnalysis: !!structuredResult.criteriaAnalysis,
+          hasPrioritizedRecommendations: !!structuredResult.prioritizedRecommendations,
+          hasScoreBreakdown: !!structuredResult.scoreBreakdown,
+          hasApprovalLikelihood: !!structuredResult.approvalLikelihood
+        });
+        
+        updatedEvaluation = await this.evaluationRepository.updateStructuredResults(
+          evaluation.evaluationId,
+          {
+            score: cappedScore,
+            summary: structuredResult.summary,
+            recommendations: structuredResult.prioritizedRecommendations?.map((r: any) => r.text),
+            conclusion: structuredResult.conclusion,
+            criteriaAnalysis: structuredResult.criteriaAnalysis,
+            prioritizedRecommendations: structuredResult.prioritizedRecommendations,
+            scoreBreakdown: structuredResult.scoreBreakdown,
+            approvalLikelihood: structuredResult.approvalLikelihood
+          }
+        );
+      } else {
+        // Use legacy update method for backward compatibility
+        logger.debug('Updating evaluation with legacy results', {
+          evaluationId: evaluation.evaluationId
+        });
+        
+        updatedEvaluation = await this.evaluationRepository.updateResults(
+          evaluation.evaluationId,
+          cappedScore,
+          evaluationResult.summary,
+          evaluationResult.recommendations,
+          evaluationResult.conclusion
+        );
+      }
 
       if (!updatedEvaluation) {
         throw new Error('Failed to update evaluation with results');
@@ -171,7 +206,8 @@ export class EvaluationService {
         summary: evaluationResult.summary,
         evaluationId: evaluation.evaluationId,
         recommendations: evaluationResult.recommendations,
-        conclusion: evaluationResult.conclusion
+        conclusion: evaluationResult.conclusion,
+        evaluation: updatedEvaluation // Pass full evaluation for PDF generation
       }).catch(error => {
         // Email errors are logged but don't fail the evaluation
         logger.error('Email notification failed', {
@@ -299,6 +335,7 @@ export class EvaluationService {
     evaluationId: string;
     recommendations?: string[];
     conclusion?: string;
+    evaluation: IEvaluation;
   }): Promise<void> {
     try {
       await this.emailService.sendEvaluationResults(params);

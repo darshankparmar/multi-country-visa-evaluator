@@ -2,7 +2,8 @@ import { Router, Request, Response, NextFunction } from 'express';
 import {
   createEvaluation,
   getEvaluation,
-  listEvaluations
+  listEvaluations,
+  downloadEvaluationPDF
 } from '../controllers/evaluationController';
 import { authenticatePartner, optionalAuthentication } from '../middleware/auth';
 import { uploadDocuments } from '../middleware/upload';
@@ -62,6 +63,19 @@ router.post(
   validateRequest(createEvaluationSchema, 'body'), // Validate body
   validateFileUpload(true, 1, 10), // Validate at least 1 file, max 10
   createEvaluation
+);
+
+/**
+ * GET /api/evaluations/:id/download
+ * Download evaluation report as Markdown
+ * 
+ * - Generates and downloads Markdown report
+ * - No authentication required (public access by ID)
+ */
+router.get(
+  '/:id/download',
+  validateRequest(evaluationIdParamSchema, 'params'), // Validate UUID format
+  downloadEvaluationPDF
 );
 
 /**

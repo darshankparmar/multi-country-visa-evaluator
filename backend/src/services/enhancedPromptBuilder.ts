@@ -8,6 +8,8 @@
 
 import { VisaCriteriaConfig, SalaryThreshold } from '../config/visaCriteria'
 import { ParsedDocument } from './documentParser'
+import { ValidationResult } from './criteriaValidator'
+import { ScoreCalculation } from './scoringEngine'
 import { logger } from '../config/logger'
 
 /**
@@ -358,5 +360,243 @@ export class EnhancedPromptBuilder {
     }
     
     return result
+  }
+
+  /**
+   * Build evaluation prompt with validation results and score calculation
+   * 
+   * Creates an enhanced prompt that includes:
+   * - Visa type description and purpose
+   * - Validation results showing which requirements are met/not met
+   * - Score calculation with penalties for missing critical requirements
+   * - Critical requirements status
+   * - Document content for analysis
+   * - Specific instructions for structured AI response
+   * 
+   * @param country - Country name
+   * @param visaType - Visa type name
+   * @param visaCriteria - Visa criteria configuration
+   * @param parsedDocuments - Array of parsed documents with extracted text
+   * @param userInfo - User information (name and email)
+   * @param validationResults - Array of validation results from criteria validator
+   * @param scoreCalculation - Score calculation with penalties
+   * @returns Formatted prompt string for AI evaluation
+   */
+  buildVisaSpecificPromptWithValidation(
+    country: string,
+    visaType: string,
+    visaCriteria: VisaCriteriaConfig,
+    parsedDocuments: ParsedDocument[],
+    userInfo: { name: string; email: string },
+    validationResults: ValidationResult[],
+    scoreCalculation: ScoreCalculation
+  ): string {
+    logger.debug('Building visa-specific prompt with validation results', {
+      country,
+      visaType,
+      documentCount: parsedDocuments.length,
+      validationResultsCount: validationResults.length,
+      baseScore: scoreCalculation.baseScore,
+      totalPenalty: scoreCalculation.totalPenalty,
+      adjustedScore: scoreCalculation.adjustedScore
+    })
+
+    // Build the prompt sections
+    const sections: string[] = []
+
+    // Header section
+    sections.push(`# Visa Evaluation with Validation Results`)
+    sections.push(``)
+    sections.push(`**Applicant:** ${userInfo.name}`)
+    sections.push(`**Email:** ${userInfo.email}`)
+    sections.push(`**Target Country:** ${country}`)
+    sections.push(`**Visa Type:** ${visaType}`)
+    sections.push(``)
+
+    // Visa description section
+    sections.push(`## Visa Type Information`)
+    sections.push(``)
+    sections.push(`**Description:** ${visaCriteria.description}`)
+    
+    if (visaCriteria.processingTime) {
+      sections.push(`**Processing Time:** ${visaCriteria.processingTime}`)
+    }
+    
+    if (visaCriteria.pathToPermanentResidency) {
+      sections.push(`**Path to Permanent Residency:** ${visaCriteria.pathToPermanentResidency}`)
+    }
+    sections.push(``)
+
+    // Validation Results Section
+    sections.push(`## Validation Results`)
+    sections.push(``)
+    sections.push(`The following requirements have been validated against the applicant's documents:`)
+    sections.push(``)
+    
+    validationResults.forEach(result => {
+      const status = result.met ? '✓ MET' : '✗ NOT MET'
+      const critical = result.isCritical ? ' [CRITICAL]' : ''
+      sections.push(`### ${result.criterion}${critical}`)
+      sections.push(`**Status:** ${status}`)
+      sections.push(`**Score:** ${result.score}/${result.maxScore}`)
+      sections.push(`**Details:** ${result.details}`)
+      
+      if (result.evidence && result.evidence.length > 0) {
+        sections.push(`**Evidence:**`)
+        result.evidence.forEach(ev => {
+          sections.push(`- ${ev}`)
+        })
+      }
+      
+      if (result.sourceDocument) {
+        sections.push(`**Source Document:** ${result.sourceDocument}`)
+      }
+      
+      if (!result.met && result.recommendation) {
+        sections.push(`**Recommendation:** ${result.recommendation}`)
+      }
+      sections.push(``)
+    })
+
+    // Score Calculation Section
+    sections.push(`## Score Calculation`)
+    sections.push(``)
+    sections.push(`**Base Score:** ${scoreCalculation.baseScore.toFixed(1)}/100`)
+    
+    if (scoreCalculation.penalties.length > 0) {
+      sections.push(``)
+      sections.push(`**Penalties Applied:**`)
+      scoreCalculation.penalties.forEach(p => {
+        sections.push(`- ${p.requirement}: -${p.points} points (${p.reason})`)
+      })
+      sections.push(``)
+      sections.push(`**Total Penalty:** -${scoreCalculation.totalPenalty.toFixed(1)} points`)
+    }
+    
+    sections.push(``)
+    sections.push(`**Adjusted Score:** ${scoreCalculation.adjustedScore.toFixed(1)}/100`)
+    sections.push(``)
+
+    // Critical Requirements Status
+    if (visaCriteria.criticalRequirements) {
+      sections.push(`## Critical Requirements Status`)
+      sections.push(``)
+      sections.push(`The following are CRITICAL requirements for this visa type. Missing any of these significantly reduces approval likelihood:`)
+      sections.push(``)
+      
+      const criticalReqs = visaCriteria.criticalRequirements.requirements
+      criticalReqs.forEach(req => {
+        const validation = validationResults.find(v => 
+          v.criterion.toLowerCase().includes(req.toLowerCase()) ||
+          req.toLowerCase().includes(v.criterion.toLowerCase())
+        )
+        const status = validation?.met ? '✓ MET' : '✗ NOT MET'
+        sections.push(`- **${req}**: ${status}`)
+      })
+      sections.push(``)
+    }
+
+    // Documents section
+    sections.push(`## Applicant Documents`)
+    sections.push(``)
+    sections.push(`The following documents have been provided by the applicant:`)
+    sections.push(``)
+
+    const successfulDocs = parsedDocuments.filter(d => d.success)
+    const failedDocs = parsedDocuments.filter(d => !d.success)
+
+    if (successfulDocs.length > 0) {
+      successfulDocs.forEach((doc, index) => {
+        sections.push(`### Document ${index + 1}: ${doc.originalName} (${doc.documentType})`)
+        sections.push(``)
+        sections.push('```')
+        sections.push(doc.extractedText)
+        sections.push('```')
+        sections.push(``)
+      })
+    }
+
+    if (failedDocs.length > 0) {
+      sections.push(`### Failed to Parse:`)
+      failedDocs.forEach(doc => {
+        sections.push(`- ${doc.originalName}: ${doc.error || 'Unknown error'}`)
+      })
+      sections.push(``)
+    }
+
+    // AI Instructions
+    sections.push(`## Your Task`)
+    sections.push(``)
+    sections.push(`Based on the validation results above, provide a comprehensive evaluation.`)
+    sections.push(``)
+    sections.push(`**IMPORTANT INSTRUCTIONS:**`)
+    sections.push(``)
+    sections.push(`1. **The validation results are AUTHORITATIVE** - Do not contradict them. They represent objective analysis of the documents.`)
+    sections.push(`2. **Use the calculated score** (${scoreCalculation.adjustedScore.toFixed(1)}/100) as the final score in your response.`)
+    sections.push(`3. **Explain WHY requirements were not met** - Focus on specific gaps and what information is missing or insufficient.`)
+    sections.push(`4. **Prioritize recommendations by criticality** - Critical requirements should have CRITICAL priority, other important gaps should be HIGH priority.`)
+    sections.push(`5. **Be specific and actionable** - Provide concrete steps the applicant can take to address each gap.`)
+    sections.push(`6. **Cite evidence from documents** - Reference specific information found in the documents to support your analysis.`)
+    sections.push(``)
+
+    // Response format
+    sections.push(`## Response Format`)
+    sections.push(``)
+    sections.push(`**CRITICAL: You MUST respond ONLY with a valid JSON object. Do not include any text before or after the JSON.**`)
+    sections.push(``)
+    sections.push(`Respond with a JSON object in exactly this format:`)
+    sections.push(``)
+    sections.push(`{`)
+    sections.push(`  "score": ${scoreCalculation.adjustedScore.toFixed(1)},`)
+    sections.push(`  "criteriaAnalysis": [`)
+    sections.push(`    {`)
+    sections.push(`      "name": "Criterion Name",`)
+    sections.push(`      "rating": "STRONG|GOOD|MODERATE|WEAK|CRITICAL_GAP",`)
+    sections.push(`      "evidence": ["Evidence 1 from documents", "Evidence 2 from documents"],`)
+    sections.push(`      "gaps": ["Gap 1 if any", "Gap 2 if any"],`)
+    sections.push(`      "recommendation": "Specific actionable recommendation if gaps exist",`)
+    sections.push(`      "isCritical": true|false`)
+    sections.push(`    }`)
+    sections.push(`  ],`)
+    sections.push(`  "prioritizedRecommendations": [`)
+    sections.push(`    {`)
+    sections.push(`      "priority": "CRITICAL|HIGH|MEDIUM|LOW",`)
+    sections.push(`      "text": "Specific actionable recommendation",`)
+    sections.push(`      "relatedCriterion": "Name of related criterion"`)
+    sections.push(`    }`)
+    sections.push(`  ],`)
+    sections.push(`  "summary": "Comprehensive markdown-formatted summary explaining the evaluation, validation results, and overall assessment",`)
+    sections.push(`  "conclusion": "Clear statement about application viability, approval likelihood, and next steps"`)
+    sections.push(`}`)
+    sections.push(``)
+    sections.push(`**Field Requirements:**`)
+    sections.push(``)
+    sections.push(`- **score**: Must be ${scoreCalculation.adjustedScore.toFixed(1)} (the calculated adjusted score)`)
+    sections.push(`- **criteriaAnalysis**: Array with one entry for each validated criterion`)
+    sections.push(`  - **rating**: Use CRITICAL_GAP for unmet critical requirements, WEAK for unmet non-critical, MODERATE for partially met, GOOD for met, STRONG for exceeded`)
+    sections.push(`  - **evidence**: List specific facts from documents (salary amounts, degree levels, years of experience, etc.)`)
+    sections.push(`  - **gaps**: List specific deficiencies or missing information`)
+    sections.push(`  - **isCritical**: Set to true if this is a critical requirement for the visa type`)
+    sections.push(`- **prioritizedRecommendations**: Array sorted by priority`)
+    sections.push(`  - **priority**: CRITICAL for missing critical requirements, HIGH for important gaps, MEDIUM for improvements, LOW for optional enhancements`)
+    sections.push(`  - **text**: Specific action to take (e.g., "Obtain LCA from employer - MANDATORY for H-1B approval")`)
+    sections.push(`  - **relatedCriterion**: Name of the criterion this recommendation addresses`)
+    sections.push(`- **summary**: Comprehensive explanation in markdown format with sections for each criterion`)
+    sections.push(`- **conclusion**: Clear statement of approval likelihood and next steps`)
+    sections.push(``)
+    sections.push(`**Response must be ONLY valid JSON, nothing else.**`)
+
+    const prompt = sections.join('\n')
+
+    logger.debug('Visa-specific prompt with validation built', {
+      country,
+      visaType,
+      promptLength: prompt.length,
+      sectionsCount: sections.length,
+      validationResultsIncluded: validationResults.length,
+      penaltiesIncluded: scoreCalculation.penalties.length
+    })
+
+    return prompt
   }
 }

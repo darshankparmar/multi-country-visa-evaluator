@@ -236,10 +236,17 @@ describe('Backward Compatibility Tests', () => {
       const configuredResult = await aiEvaluator.evaluate(configuredParams);
       const unconfiguredResult = await aiEvaluator.evaluate(unconfiguredParams);
 
-      expect(Object.keys(configuredResult).sort()).toEqual(Object.keys(unconfiguredResult).sort());
+      // Both should have core fields
       expect(typeof configuredResult.score).toBe(typeof unconfiguredResult.score);
       expect(typeof configuredResult.summary).toBe(typeof unconfiguredResult.summary);
       expect(Array.isArray(configuredResult.recommendations)).toBe(Array.isArray(unconfiguredResult.recommendations));
+      expect(typeof configuredResult.conclusion).toBe(typeof unconfiguredResult.conclusion);
+      
+      // Configured visas may have additional structured result
+      expect(configuredResult.score).toBeDefined();
+      expect(configuredResult.summary).toBeDefined();
+      expect(configuredResult.recommendations).toBeDefined();
+      expect(configuredResult.conclusion).toBeDefined();
     });
 
     it('should not expose category scores for any visa type', async () => {

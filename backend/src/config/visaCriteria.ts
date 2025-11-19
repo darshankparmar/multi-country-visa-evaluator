@@ -61,6 +61,20 @@ export interface VisaCriteriaConfig {
   /** Unique rules or benefits specific to this visa type */
   uniqueRules?: string[]
   
+  // Critical requirements and penalties
+  /** Critical requirements configuration for penalty-based scoring */
+  criticalRequirements?: {
+    /** List of critical requirement identifiers (e.g., 'lca', 'sponsor', 'salary') */
+    requirements: string[]
+    /** Penalty points for each critical requirement when not met */
+    penalties: Record<string, number>
+    /** Maximum total penalty cap to avoid negative scores */
+    maxTotalPenalty?: number
+  }
+  
+  /** Required document types for this visa (e.g., ['LCA', 'Employment Contract']) */
+  requiredDocumentTypes?: string[]
+  
   // Scoring weights (override default if provided)
   /** Custom weights for different criteria (must sum to 100) */
   criteriaWeights?: {
@@ -109,6 +123,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Spouses and children can accompany with work rights',
       'Employer can be waived from 50:50 EEA workforce rule'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'sponsor'],
+      penalties: {
+        salary: 35,
+        sponsor: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Degree Certificate'],
     criteriaWeights: {
       salary: 35,
       education: 25,
@@ -145,6 +168,16 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'First-time permit holders must stay 9 months with initial employer',
       'Employer must comply with 50:50 EEA workforce rule or obtain waiver'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'labor_market_test', 'sponsor'],
+      penalties: {
+        salary: 30,
+        labor_market_test: 25,
+        sponsor: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Labor Market Test Documentation'],
     criteriaWeights: {
       salary: 30,
       education: 15,
@@ -193,6 +226,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Specialized tracks for orientation year graduates',
       'Fast processing time compared to other visa types'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'sponsor'],
+      penalties: {
+        salary: 40,
+        sponsor: 35
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Degree Certificate', 'Sponsor Recognition'],
     criteriaWeights: {
       salary: 40,
       education: 25,
@@ -222,6 +264,14 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Can be used to search for employment or start a business',
       'Must transition to another permit type (e.g., Knowledge Migrant) to stay longer'
     ],
+    criticalRequirements: {
+      requirements: ['education'],
+      penalties: {
+        education: 50
+      },
+      maxTotalPenalty: 50
+    },
+    requiredDocumentTypes: ['Degree Certificate', 'University Ranking Proof'],
     criteriaWeights: {
       salary: 0,
       education: 60,
@@ -265,6 +315,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Valid for contract length up to 4 years',
       'Fast-track to permanent residency (21 months with B1 German, 33 months with A1)'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'education'],
+      penalties: {
+        salary: 35,
+        education: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Degree Certificate', 'Degree Recognition'],
     criteriaWeights: {
       salary: 35,
       education: 30,
@@ -293,6 +352,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'No labor market test required',
       'Suitable for managers, specialists, and trainee transfers'
     ],
+    criticalRequirements: {
+      requirements: ['intracompany_relationship', 'experience'],
+      penalties: {
+        intracompany_relationship: 40,
+        experience: 25
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Intracompany Transfer Letter', 'Experience Letter'],
     criteriaWeights: {
       salary: 20,
       education: 25,
@@ -328,6 +396,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Family members receive work rights',
       'Spouses do not need French language for family reunification'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'education'],
+      penalties: {
+        salary: 35,
+        education: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Degree Certificate'],
     criteriaWeights: {
       salary: 35,
       education: 30,
@@ -362,6 +439,15 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Family reunification allowed',
       'No labor market test required'
     ],
+    criticalRequirements: {
+      requirements: ['salary', 'intracompany_transfer'],
+      penalties: {
+        salary: 35,
+        intracompany_transfer: 35
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Intracompany Transfer Letter'],
     criteriaWeights: {
       salary: 35,
       education: 20,
@@ -392,6 +478,16 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'No annual cap or lottery system',
       'Initial validity up to 3 years, renewable in 1-year increments'
     ],
+    criticalRequirements: {
+      requirements: ['extraordinary_ability_evidence', 'advisory_opinion', 'sponsor'],
+      penalties: {
+        extraordinary_ability_evidence: 50,
+        advisory_opinion: 40,
+        sponsor: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['Evidence of Extraordinary Ability', 'Advisory Opinion', 'Employment Contract'],
     criteriaWeights: {
       salary: 10,
       education: 15,
@@ -431,6 +527,16 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Employment is employer-specific - changing jobs requires new petition',
       'Prevailing wage must be paid to ensure no adverse effect on U.S. workers'
     ],
+    criticalRequirements: {
+      requirements: ['lca', 'sponsor', 'salary'],
+      penalties: {
+        lca: 40,
+        sponsor: 35,
+        salary: 30
+      },
+      maxTotalPenalty: 60
+    },
+    requiredDocumentTypes: ['LCA', 'Employment Contract', 'Degree Certificate'],
     criteriaWeights: {
       salary: 30,
       education: 35,
@@ -462,6 +568,14 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Valid for up to 3 years',
       'Starosta statement confirms no negative impact on local labor market'
     ],
+    criticalRequirements: {
+      requirements: ['labor_market_test'],
+      penalties: {
+        labor_market_test: 30
+      },
+      maxTotalPenalty: 30
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Labor Market Test Documentation'],
     criteriaWeights: {
       salary: 25,
       education: 20,
@@ -493,6 +607,14 @@ export const VISA_CRITERIA_CONFIGS: Record<string, VisaCriteriaConfig> = {
       'Social security and tax compliance required',
       'Faster processing than Type A due to no labor market test'
     ],
+    criticalRequirements: {
+      requirements: ['intracompany_relationship'],
+      penalties: {
+        intracompany_relationship: 35
+      },
+      maxTotalPenalty: 35
+    },
+    requiredDocumentTypes: ['Employment Contract', 'Intracompany Transfer Letter'],
     criteriaWeights: {
       salary: 25,
       education: 20,
@@ -631,6 +753,60 @@ export function validateVisaCriteriaConfig(criteria: VisaCriteriaConfig): string
     }
   }
   
+  // Validate critical requirements if present
+  if (criteria.criticalRequirements) {
+    const critReqs = criteria.criticalRequirements
+    
+    if (!Array.isArray(critReqs.requirements)) {
+      errors.push('criticalRequirements.requirements must be an array')
+    } else if (critReqs.requirements.length === 0) {
+      errors.push('criticalRequirements.requirements cannot be empty')
+    }
+    
+    if (typeof critReqs.penalties !== 'object' || critReqs.penalties === null) {
+      errors.push('criticalRequirements.penalties must be an object')
+    } else {
+      // Validate each penalty
+      for (const [requirement, penalty] of Object.entries(critReqs.penalties)) {
+        if (typeof penalty !== 'number') {
+          errors.push(`criticalRequirements.penalties.${requirement} must be a number`)
+        } else if (penalty < 10 || penalty > 50) {
+          errors.push(`criticalRequirements.penalties.${requirement} must be between 10 and 50 (current: ${penalty})`)
+        }
+      }
+      
+      // Ensure all requirements have penalties defined
+      for (const requirement of critReqs.requirements) {
+        if (!(requirement in critReqs.penalties)) {
+          errors.push(`criticalRequirements.penalties missing entry for requirement: ${requirement}`)
+        }
+      }
+    }
+    
+    if (critReqs.maxTotalPenalty !== undefined) {
+      if (typeof critReqs.maxTotalPenalty !== 'number') {
+        errors.push('criticalRequirements.maxTotalPenalty must be a number')
+      } else if (critReqs.maxTotalPenalty < 0 || critReqs.maxTotalPenalty > 100) {
+        errors.push(`criticalRequirements.maxTotalPenalty must be between 0 and 100 (current: ${critReqs.maxTotalPenalty})`)
+      }
+    }
+  }
+  
+  // Validate required document types if present
+  if (criteria.requiredDocumentTypes) {
+    if (!Array.isArray(criteria.requiredDocumentTypes)) {
+      errors.push('requiredDocumentTypes must be an array')
+    } else if (criteria.requiredDocumentTypes.length === 0) {
+      errors.push('requiredDocumentTypes cannot be empty if specified')
+    } else {
+      criteria.requiredDocumentTypes.forEach((docType, index) => {
+        if (typeof docType !== 'string' || docType.trim() === '') {
+          errors.push(`requiredDocumentTypes[${index}] must be a non-empty string`)
+        }
+      })
+    }
+  }
+  
   return errors
 }
 
@@ -643,6 +819,7 @@ export function validateAllVisaCriteriaConfigs(): void {
   
   let validCount = 0
   let invalidCount = 0
+  let criticalRequirementsCount = 0
   
   for (const [key, criteria] of Object.entries(VISA_CRITERIA_CONFIGS)) {
     const errors = validateVisaCriteriaConfig(criteria)
@@ -652,16 +829,33 @@ export function validateAllVisaCriteriaConfigs(): void {
       invalidCount++
     } else {
       validCount++
+      
+      // Log critical requirements configuration
+      if (criteria.criticalRequirements) {
+        criticalRequirementsCount++
+        logger.info('Critical requirements configured', {
+          key,
+          requirements: criteria.criticalRequirements.requirements,
+          penalties: criteria.criticalRequirements.penalties,
+          maxTotalPenalty: criteria.criticalRequirements.maxTotalPenalty,
+          requiredDocumentTypes: criteria.requiredDocumentTypes
+        })
+      }
     }
   }
   
   logger.info('Visa criteria validation complete', { 
     total: validCount + invalidCount,
     valid: validCount, 
-    invalid: invalidCount 
+    invalid: invalidCount,
+    withCriticalRequirements: criticalRequirementsCount
   })
   
   if (invalidCount > 0) {
     logger.warn('Some visa criteria configurations are invalid and may not work correctly')
+  }
+  
+  if (criticalRequirementsCount === 0) {
+    logger.warn('No visa criteria configurations have critical requirements defined')
   }
 }
