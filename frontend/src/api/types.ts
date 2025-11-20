@@ -81,6 +81,16 @@ export interface EvaluationResponse {
   prioritizedRecommendations?: PrioritizedRecommendation[]
   scoreBreakdown?: ScoreBreakdown
   approvalLikelihood?: ApprovalLikelihood
+  validationResults?: Array<{
+    criterion: string
+    met: boolean
+    score: number
+    maxScore: number
+    details: string
+    isCritical: boolean
+    evidence?: string[]
+    sourceDocument?: string
+  }>
 }
 
 /**

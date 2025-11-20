@@ -90,8 +90,10 @@ export const EvaluationForm: React.FC = () => {
       // Reset form after successful submission
       resetForm()
       
-      // Navigate to results page (will fetch full evaluation data)
-      navigate(`/results/${response.evaluationId}`)
+      // Navigate to results page with evaluation data to avoid extra API call
+      navigate(`/results/${response.evaluationId}`, {
+        state: { evaluationData: response }
+      })
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to submit evaluation'
       toast.error(errorMessage)
