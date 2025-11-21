@@ -68,10 +68,16 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ evaluations })
       {/* Country Breakdown */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Evaluations by Country</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={countryData}>
+        <ResponsiveContainer width="100%" height={350}>
+          <BarChart data={countryData} margin={{ bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="country" />
+            <XAxis 
+              dataKey="country" 
+              angle={-45}
+              textAnchor="end"
+              height={100}
+              interval={0}
+            />
             <YAxis />
             <Tooltip />
             <Legend />
@@ -83,10 +89,16 @@ export const AnalyticsCharts: React.FC<AnalyticsChartsProps> = ({ evaluations })
       {/* Visa Type Breakdown */}
       <div className="bg-white rounded-lg shadow-md p-6">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Evaluations by Visa Type</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={visaTypeData}>
+        <ResponsiveContainer width="100%" height={350}>
+          <BarChart data={visaTypeData} margin={{ bottom: 80 }}>
             <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="visaType" />
+            <XAxis 
+              dataKey="visaType" 
+              angle={-45}
+              textAnchor="end"
+              height={100}
+              interval={0}
+            />
             <YAxis />
             <Tooltip />
             <Legend />
