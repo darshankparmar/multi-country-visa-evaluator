@@ -65,6 +65,7 @@ Visit **https://multi-country-visa-evaluator.vercel.app** to try the application
 ### Getting Started
 - [Backend Setup & API Guide](backend/README.md) - Complete backend documentation
 - [Frontend Setup Guide](frontend/README.md) - Frontend installation and development
+- [📸 Application Screenshots](docs/SCREENSHOTS.md) - Visual walkthrough of all features
 
 ### Technical Documentation
 - [API Documentation](backend/docs/API.md) - REST API endpoints with examples
