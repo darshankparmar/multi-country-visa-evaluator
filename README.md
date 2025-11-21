@@ -8,6 +8,16 @@ A production-ready full-stack system that collects visa applicant data, validate
 
 **Application**: https://multi-country-visa-evaluator.vercel.app
 
+### 🎥 Demo Video
+
+Watch the complete evaluation submission process:
+
+<video src="docs/videos/multi-country-visa-evaluator.mp4" width="100%" controls></video>
+
+*📹 [Download/View Demo Video](docs/videos/multi-country-visa-evaluator.mp4)*
+
+### Try It Yourself
+
 Try the live application to:
 - ✅ Submit visa evaluations for 6 countries
 - ✅ View instant AI-powered results with recommendations

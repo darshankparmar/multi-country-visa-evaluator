@@ -1,6 +1,18 @@
-# 📸 Application Screenshots
+# 📸 Application Screenshots & Demo
 
 This document showcases the key features and user interface of the Multi-Country Visa Evaluator application.
+
+## 🎥 Demo Video
+
+Watch a complete walkthrough of the visa evaluation submission process:
+
+**[📹 View Demo Video](videos/multi-country-visa-evaluator.mp4)**
+
+The demo video shows:
+- Complete evaluation form submission flow
+- Document upload process
+- Real-time AI evaluation
+- Detailed results with recommendations
 
 ## 🏠 Home Page
 
