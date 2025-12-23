@@ -12,9 +12,9 @@ A production-ready full-stack system that collects visa applicant data, validate
 
 Watch the complete evaluation submission process:
 
-<video src="docs/videos/multi-country-visa-evaluator.mp4" width="100%" controls></video>
-
 *📹 [Download/View Demo Video](docs/videos/multi-country-visa-evaluator.mp4)*
+
+<img src="docs/images/home_page.png" alt="Video preview" width="400" />
 
 ### Try It Yourself
 
